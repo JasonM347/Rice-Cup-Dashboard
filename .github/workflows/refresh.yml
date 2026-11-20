@@ -27,20 +27,24 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Download Main Event and Hard Luck brackets from Challonge
+      - name: Fetch Main Event and Hard Luck from the Challonge API
         id: fetch
         if: github.event_name != 'push'
+        env:
+          CHALLONGE_API_KEY: ${{ secrets.CHALLONGE_API_KEY }}
         run: |
+          set +e
+          python3 scripts/challonge_api.py ctegjndn jjwwzfei
+          rc=$?
           set -e
-          for s in ctegjndn jjwwzfei; do
-            curl -sfL --retry 2 --max-time 30 -A "Mozilla/5.0" "https://challonge.com/$s.json" -o "/tmp/b_$s.json"
-            head -c1 "/tmp/b_$s.json" | grep -q '{'
-            cp "/tmp/b_$s.json" "raw/b_$s.json"
-          done
+          if [ $rc -eq 2 ]; then
+            echo "::warning::Add the CHALLONGE_API_KEY repository secret to turn on refreshes."
+            echo "changed=false" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          if [ $rc -ne 0 ]; then exit 1; fi
           if git diff --quiet -- raw/; then
             echo "No change on Challonge."
-            echo "changed=false" >> "$GITHUB_OUTPUT"
-            exit 0
+            echo "changed=false" >> "$GITHUB_OUTPUT"; exit 0
           fi
           printf '{"asOf":"%s"}' "$(TZ=America/Winnipeg date -Iseconds)" > raw/meta.json
           git config user.name "rice-cup-refresh"

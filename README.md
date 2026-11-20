@@ -4,7 +4,7 @@ Unofficial predictions for the 2026 CanCentral Rice Cup Championships (Crazy 8 B
 
 ## How it stays current
 
-`.github/workflows/refresh.yml` runs every 10 minutes during the event (Nov 20–22). It downloads the Main Event and Hard Luck brackets from Challonge and republishes the site only when they changed. Run it any time from **Actions → Refresh brackets and publish → Run workflow**.
+`.github/workflows/refresh.yml` runs every 10 minutes during the event (Nov 20–22). It reads the Main Event and Hard Luck brackets through the official Challonge API (`scripts/challonge_api.py`, using the `CHALLONGE_API_KEY` repository secret), converts them to the format the page reads, and republishes the site only when they changed. Run it any time from **Actions → Refresh brackets and publish → Run workflow**.
 
 ## Data
 
