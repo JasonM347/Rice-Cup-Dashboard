@@ -5,13 +5,13 @@ on:
     branches: [main]
   workflow_dispatch:
   schedule:
-    # Every 15 minutes during play hours only (Winnipeg is UTC-5 this weekend), to stay
-    # inside Challonge's free 500 API requests a month (2 requests per run, about 340 total):
+    # Every 20 minutes during play hours only (Winnipeg is UTC-5 this weekend), to stay
+    # inside Challonge's free 500 API requests a month (about 3 requests per run, about 400 total):
     #   Fri 6 PM-3 AM, Sat 10 AM-3 AM, Sun 10 AM-3 AM.
     # GitHub may delay scheduled runs by a few minutes when busy.
-    - cron: '*/15 23 20 11 *'
-    - cron: '*/15 0-7 21-23 11 *'
-    - cron: '*/15 15-23 21-22 11 *'
+    - cron: '*/20 23 20 11 *'
+    - cron: '*/20 0-7 21-23 11 *'
+    - cron: '*/20 15-23 21-22 11 *'
 
 permissions:
   contents: write
@@ -35,14 +35,15 @@ jobs:
         id: fetch
         if: github.event_name != 'push'
         env:
-          CHALLONGE_API_KEY: ${{ secrets.CHALLONGE_API_KEY }}
+          CHALLONGE_CLIENT_ID: ${{ secrets.CHALLONGE_CLIENT_ID }}
+          CHALLONGE_CLIENT_SECRET: ${{ secrets.CHALLONGE_CLIENT_SECRET }}
         run: |
           set +e
           python3 scripts/challonge_api.py ctegjndn jjwwzfei
           rc=$?
           set -e
           if [ $rc -eq 2 ]; then
-            echo "::warning::Add the CHALLONGE_API_KEY repository secret to turn on refreshes."
+            echo "::warning::Add the CHALLONGE_CLIENT_ID and CHALLONGE_CLIENT_SECRET repository secrets to turn on refreshes."
             echo "changed=false" >> "$GITHUB_OUTPUT"; exit 0
           fi
           if [ $rc -ne 0 ]; then exit 1; fi
