@@ -18,7 +18,9 @@ def clean(text):
 
 
 def call(url, data=None, headers=None):
-    req = urllib.request.Request(url, data=data, headers=headers or {})
+    h = {"User-Agent": "rice-cup-dashboard/1.0 (+https://jasonm347.github.io/Rice-Cup-Dashboard/)"}
+    h.update(headers or {})
+    req = urllib.request.Request(url, data=data, headers=h)
     try:
         with urllib.request.urlopen(req, timeout=40) as r:
             return r.status, r.read().decode("utf-8", "replace")
