@@ -5,9 +5,13 @@ on:
     branches: [main]
   workflow_dispatch:
   schedule:
-    # Every 10 minutes, Nov 20-23 (UTC) = Fri 6 PM through Sunday night, Winnipeg time.
+    # Every 15 minutes during play hours only (Winnipeg is UTC-5 this weekend), to stay
+    # inside Challonge's free 500 API requests a month (2 requests per run, about 340 total):
+    #   Fri 6 PM-3 AM, Sat 10 AM-3 AM, Sun 10 AM-3 AM.
     # GitHub may delay scheduled runs by a few minutes when busy.
-    - cron: '*/10 * 20-23 11 *'
+    - cron: '*/15 23 20 11 *'
+    - cron: '*/15 0-7 21-23 11 *'
+    - cron: '*/15 15-23 21-22 11 *'
 
 permissions:
   contents: write
