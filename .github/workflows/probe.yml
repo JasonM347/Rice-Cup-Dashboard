@@ -1,0 +1,21 @@
+name: Check Challonge v2.1 access
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: [scripts/challonge_v2_probe.py, .github/workflows/probe.yml]
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Try the Client ID and Secret
+        env:
+          CHALLONGE_CLIENT_ID: ${{ secrets.CHALLONGE_CLIENT_ID }}
+          CHALLONGE_CLIENT_SECRET: ${{ secrets.CHALLONGE_CLIENT_SECRET }}
+        run: python3 scripts/challonge_v2_probe.py
