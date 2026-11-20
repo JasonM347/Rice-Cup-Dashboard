@@ -1,0 +1,66 @@
+name: Refresh brackets and publish
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+  schedule:
+    # Every 10 minutes, Nov 20-23 (UTC) = Fri 6 PM through Sunday night, Winnipeg time.
+    # GitHub may delay scheduled runs by a few minutes when busy.
+    - cron: '*/10 * 20-23 11 *'
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download Main Event and Hard Luck brackets from Challonge
+        id: fetch
+        if: github.event_name != 'push'
+        run: |
+          set -e
+          for s in ctegjndn jjwwzfei; do
+            curl -sfL --retry 2 --max-time 30 -A "Mozilla/5.0" "https://challonge.com/$s.json" -o "/tmp/b_$s.json"
+            head -c1 "/tmp/b_$s.json" | grep -q '{'
+            cp "/tmp/b_$s.json" "raw/b_$s.json"
+          done
+          if git diff --quiet -- raw/; then
+            echo "No change on Challonge."
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          printf '{"asOf":"%s"}' "$(TZ=America/Winnipeg date -Iseconds)" > raw/meta.json
+          git config user.name "rice-cup-refresh"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add raw/
+          git commit -m "Refresh brackets $(TZ=America/Winnipeg date '+%a %H:%M')"
+          git push
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Pages
+        if: github.event_name == 'push' || steps.fetch.outputs.changed == 'true'
+        uses: actions/configure-pages@v5
+
+      - name: Package site
+        if: github.event_name == 'push' || steps.fetch.outputs.changed == 'true'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+
+      - name: Publish to GitHub Pages
+        id: deploy
+        if: github.event_name == 'push' || steps.fetch.outputs.changed == 'true'
+        uses: actions/deploy-pages@v4

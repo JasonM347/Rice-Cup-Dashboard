@@ -1,0 +1,871 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}</style>
+</head>
+<body>
+<title>Rice Cup Predictor</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* Layout: Rice Cup dark arena. Logo header, bracket tabs, summary strip, then "on the table" + odds side by side, full match log, ratings ledger. */
+:root{
+  --bg:#0B0B0C; --panel:#141416; --panel2:#1C1C20; --line:#2A2A30;
+  --fg:#EDEDEF; --muted:#A8A8AE; --faint:#6F6F77;
+  --gold:#E8B84B; --gold-ink:#1A1405; --gold-soft:rgba(232,184,75,.13); --gold-line:rgba(232,184,75,.45);
+  --good:#62C48E; --good-soft:rgba(98,196,142,.14); --bad:#E8735F; --bad-soft:rgba(232,115,95,.14); --live:#62A8E8; --live-soft:rgba(98,168,232,.15);
+  --display:'Poppins',system-ui,'Segoe UI',sans-serif; --body:'Poppins',system-ui,'Segoe UI',sans-serif; --mono:'IBM Plex Mono',ui-monospace,Consolas,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:14px;line-height:1.45}
+.wrap{max-width:1240px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 48px}
+a{color:var(--gold)}
+button,select,input{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.num{font-family:var(--mono);font-variant-numeric:tabular-nums}
+
+header.top{display:flex;gap:18px;align-items:center;flex-wrap:wrap;padding-bottom:18px;border-bottom:1px solid var(--line)}
+header.top img{width:72px;height:72px;border-radius:50%;flex:none}
+.brand{flex:1;min-width:220px}
+.eyebrow{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--gold);font-weight:600}
+h1{font-family:var(--display);font-size:clamp(24px,4vw,34px);font-weight:800;margin:2px 0 2px;letter-spacing:-.01em;text-wrap:balance}
+.sub{color:var(--muted);font-size:13px}
+.asof{text-align:right;font-size:12px;color:var(--muted);display:grid;gap:4px;justify-items:end}
+.pill{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:3px 10px;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+
+nav.tabs{display:flex;gap:6px;overflow-x:auto;padding:14px 0 4px;scrollbar-width:thin}
+nav.tabs button{flex:none;background:transparent;border:1px solid var(--line);border-radius:10px;padding:8px 12px;cursor:pointer;color:var(--muted);display:grid;gap:1px;text-align:left}
+nav.tabs button b{font-weight:600;color:var(--fg);font-size:13px}
+nav.tabs button small{font-size:10.5px;letter-spacing:.06em;text-transform:uppercase}
+nav.tabs button[aria-selected="true"]{border-color:var(--gold);background:var(--gold-soft)}
+nav.tabs button[aria-selected="true"] b{color:var(--gold)}
+.wkhead{flex:none;align-self:center;font-size:10.5px;color:var(--faint);letter-spacing:.1em;text-transform:uppercase;padding:0 4px 0 8px;writing-mode:horizontal-tb}
+
+.ctrl{display:flex;gap:14px;flex-wrap:wrap;align-items:center;margin:14px 0 6px;color:var(--muted);font-size:12.5px}
+.ctrl label{display:flex;gap:8px;align-items:center}
+select,input[type=search]{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:6px 10px;color:var(--fg)}
+.note{font-size:12.5px;color:var(--muted)}
+.banner{border:1px solid var(--gold-line);background:var(--gold-soft);border-radius:10px;padding:10px 14px;margin:10px 0;font-size:13px}
+
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:12px 0 22px}
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px;min-width:0}
+.kpi .k{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.kpi .v{font-size:24px;font-weight:700;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kpi .d{font-size:12px;color:var(--muted);overflow-wrap:anywhere}
+.kpi .v.gold{color:var(--gold)}
+@media (max-width:820px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+h2{font-family:var(--display);font-size:18px;font-weight:700;margin:0;letter-spacing:-.005em}
+.sec{margin:26px 0}
+.sechead{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:10px}
+.cols{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:22px;align-items:start}
+@media (max-width:960px){.cols{grid-template-columns:minmax(0,1fr)}}
+
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px}
+.m{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 12px;display:grid;gap:6px;min-width:0}
+.m.follow{border-color:var(--gold)}
+.m .mh{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:11px;color:var(--faint)}
+.m .mid{font-family:var(--mono);letter-spacing:.04em}
+.pl{display:grid;grid-template-columns:minmax(0,1fr) auto auto auto;gap:8px;align-items:center}
+.pl .nm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:500}
+.pl .nm.tbd{color:var(--faint);font-weight:400;font-style:italic}
+.pl .csr{font-size:11.5px;color:var(--muted);font-family:var(--mono)}
+.pl .csr.est{color:var(--faint)}
+.pl .pct{font-family:var(--mono);font-size:12.5px;min-width:3.4em;text-align:right;color:var(--muted)}
+.pl.fav .pct{color:var(--gold);font-weight:600}
+.pl .sc{font-family:var(--mono);font-weight:600;min-width:1.2em;text-align:right}
+.pl.win .nm{color:var(--fg);font-weight:700}
+.pl.lose .nm{color:var(--faint)}
+.pl.lose .sc{color:var(--faint)}
+.eta{font-size:11.5px;color:var(--muted)}
+.eta b{color:var(--fg);font-weight:500}
+input[type=number]{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:6px 8px;color:var(--fg)}
+.fair{font-size:11.5px;color:var(--muted);border-top:1px dashed var(--line);padding-top:6px}
+.bar{height:4px;border-radius:4px;background:var(--line);overflow:hidden;display:flex}
+.bar i{display:block;height:100%;background:var(--gold)}
+.chip{font-size:10px;letter-spacing:.08em;text-transform:uppercase;border-radius:999px;padding:2px 8px;border:1px solid var(--line);color:var(--muted);white-space:nowrap}
+.chip.open{border-color:var(--gold-line);color:var(--gold)}
+.chip.live{border-color:var(--live);color:var(--live);background:var(--live-soft)}
+.chip.done{color:var(--faint)}
+.chip.upset{border-color:var(--bad);color:var(--bad);background:var(--bad-soft)}
+.chip.held{border-color:var(--good);color:var(--good);background:var(--good-soft)}
+.chip.est{border-style:dashed}
+
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.tblwrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{padding:7px 10px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap}
+th{font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:600;background:var(--panel2);position:sticky;top:0}
+td.r,th.r{text-align:right}
+tr.out td{color:var(--faint)}
+tr.me td{background:var(--gold-soft)}
+.mini{display:inline-block;width:56px;height:5px;border-radius:3px;background:var(--line);vertical-align:middle;margin-left:8px;overflow:hidden}
+.mini i{display:block;height:100%;background:var(--gold)}
+.st{font-size:11.5px;color:var(--muted)}
+.st.q{color:var(--good)} .st.o{color:var(--faint)} .st.c{color:var(--gold);font-weight:600}
+.delta{font-size:11px;margin-left:6px}
+.delta.up{color:var(--good)} .delta.dn{color:var(--bad)}
+.more{display:block;width:100%;padding:9px;background:transparent;border:0;border-top:1px solid var(--line);color:var(--gold);cursor:pointer;font-size:12.5px}
+
+.follow-card{background:linear-gradient(180deg,var(--gold-soft),transparent 70%),var(--panel);border:1px solid var(--gold-line);border-radius:14px;padding:16px;display:grid;gap:14px}
+.fc-top{display:flex;gap:16px;flex-wrap:wrap;align-items:flex-end;justify-content:space-between}
+.fc-name{font-family:var(--display);font-size:22px;font-weight:700}
+.fc-stats{display:flex;gap:22px;flex-wrap:wrap}
+.fc-stats div{display:grid}
+.fc-stats .k{font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.fc-stats .v{font-size:20px;font-weight:700;font-family:var(--mono)}
+.fc-body{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px}
+@media (max-width:720px){.fc-body{grid-template-columns:minmax(0,1fr)}}
+.path{display:grid;gap:4px;font-size:12.5px}
+.path div{display:flex;gap:8px;justify-content:space-between;border-bottom:1px dashed var(--line);padding:3px 0}
+.empty{color:var(--muted);font-size:13px;padding:14px;border:1px dashed var(--line);border-radius:12px}
+.rhead{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold);margin:16px 0 8px;font-weight:600}
+details summary{cursor:pointer;color:var(--gold);font-weight:600}
+footer{margin-top:36px;padding-top:16px;border-top:1px solid var(--line);color:var(--faint);font-size:12px;display:grid;gap:6px}
+@media (prefers-reduced-motion:no-preference){.bar i,.mini i{transition:width .35s ease}}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <img src="logo.webp" alt="Rice Cup Championships logo">
+    <div class="brand">
+      <div class="eyebrow">2026 CanCentral Rice Cup Championships</div>
+      <h1>Rice Cup Predictor</h1>
+      <div class="sub">Every match, the favourite by Fargo and CSR, fair races and live title odds. Crazy 8 Billiards, Winnipeg.</div>
+    </div>
+    <div class="asof">
+      <span class="pill">Unofficial</span>
+      <span>Brackets pulled <b id="asof" class="num"></b></span>
+    </div>
+  </header>
+
+  <nav class="tabs" id="tabs" role="tablist" aria-label="Brackets"></nav>
+
+  <div class="ctrl">
+    <label for="mode">Rating <select id="mode"><option value="fargo">Fargo first</option><option value="blend">Blend: Fargo + CSR</option><option value="csr">CSR only</option></select></label>
+    <label for="raceW">Winners race <select id="raceW"></select></label>
+    <label for="raceL">Losers race <select id="raceL"></select></label>
+    <label for="raceF" id="raceFwrap">Top-16 race <select id="raceF"></select></label>
+    <span class="note" id="modelnote"></span>
+  </div>
+  <div id="banners"></div>
+
+  <section class="kpis" id="kpis" aria-label="Summary"></section>
+
+  <section class="sec" id="followSec">
+    <div class="sechead"><h2>Follow a player</h2><label class="note" for="followSel">Player <select id="followSel"></select></label></div>
+    <div id="follow"></div>
+  </section>
+
+  <div class="cols">
+    <section class="sec">
+      <div class="sechead"><h2 id="nowTitle">On the table</h2><span class="note" id="nowNote"></span></div>
+      <div id="now"></div>
+    </section>
+    <section class="sec">
+      <div class="sechead"><h2>Title odds</h2><span class="note" id="oddsNote"></span></div>
+      <div class="panel"><div class="tblwrap" id="odds"></div></div>
+    </section>
+  </div>
+
+  <section class="sec" id="schedSec">
+    <div class="sechead"><h2>Schedule estimate</h2>
+      <div class="ctrl" style="margin:0">
+        <label for="schTables">Tables <input type="number" id="schTables" min="1" max="40" value="11" style="width:4.5em"></label>
+        <label for="schMpg">Min per game <input type="number" id="schMpg" min="1" max="20" step="0.5" value="7" style="width:4.5em"></label>
+        <label for="schChg">Changeover min <input type="number" id="schChg" min="0" max="20" value="3" style="width:4.5em"></label>
+      </div>
+    </div>
+    <div class="kpis" id="schedTiles" style="margin-top:0"></div>
+    <div class="panel"><div class="tblwrap" id="schedTable"></div></div>
+    <p class="note">Play runs straight through with no overnight break. Each free table takes the next ready match in Challonge's match order. A match lasts its expected number of games (from both players' ratings and the race length) × minutes per game, plus changeover. Unplayed matches assume the favourite wins, so later rounds are rough. Hard Luck matches sharing the tables aren't included. Times are Winnipeg time.</p>
+  </section>
+
+  <section class="sec">
+    <div class="sechead"><h2>All matches</h2>
+      <div class="ctrl" style="margin:0">
+        <select id="fRound" aria-label="Round"></select>
+        <select id="fState" aria-label="Status">
+          <option value="all">All statuses</option><option value="open">Open / on table</option><option value="pending">Pending</option><option value="complete">Complete</option><option value="upset">Upsets only</option>
+        </select>
+        <input type="search" id="fSearch" placeholder="Search player" aria-label="Search player">
+      </div>
+    </div>
+    <div id="matches"></div>
+  </section>
+
+  <section class="sec">
+    <details id="ratingsBox">
+      <summary>Ratings and name matching</summary>
+      <p class="note" id="ratingsNote"></p>
+      <div class="panel"><div class="tblwrap" id="ratings"></div></div>
+    </details>
+  </section>
+
+  <footer>
+    <div>Unofficial fan dashboard, not run by the Rice Cup Championships. Brackets from Challonge (thericecup.com bracket links). Ratings are CSR from the league player-stats sheet.</div>
+    <div>Model: every rating is put on the Fargo scale. CSR converts through the Midwest Poolplayers Association division table (D &lt;1576 = &lt;426 Fargo, C 1576 = 426, B 1651 = 476, A 1741 = 526, AA 1801 = 576, Master 1851 = 626, Pro 1950 = 730), interpolated between band edges. Fargo first (the default) uses a player's Fargo rating and falls back to converted CSR. Blend weights a player's Fargo by games/(games + 200) and their converted CSR by the rest, so a well-established Fargo dominates and a thin one barely counts. Each game uses FargoRate's odds: P = 1 / (1 + 2^((R<sub>opp</sub> − R)/100)), so 100 points doubles the odds. A match is a race to N, and the fair race is the underdog race that brings it closest to 50/50. Title odds come from 4,000 simulated runs of the remaining bracket. Players with neither rating use the bracket median and are marked "est." Fargo ratings: FargoRate public search.</div>
+    <div>Backtest on the 75 rated Women's and Junior matches from Nov 13–14, scored at each match's real race length: Fargo first picked 51 winners (log loss 0.619), Blend 48 (0.649), and CSR via the MPA table did about the same as the earlier CSR-only model. A coin flip scores 0.693.</div>
+  </footer>
+</div>
+
+<script>
+/* ---------- load raw Challonge + CSR sheet files published beside this page ---------- */
+const EVENTS = [
+  {slug:'ctegjndn', name:'Main Event',        when:'Fri Nov 20, 6:00 PM',  wk:2, start:'2026-11-20T18:00:00-05:00'},
+  {slug:'jjwwzfei', name:'Hard Luck',         when:'Nov 20–22',            wk:2},
+  {slug:'5saoxclw', name:'Women A',           when:'Fri Nov 13, 7:00 PM',  wk:1},
+  {slug:'2xh5n8e6', name:'Women A Hard Luck', when:'Fri Nov 13',           wk:1},
+  {slug:'uxum4jjl', name:'Women B',           when:'Fri Nov 13, 7:00 PM',  wk:1},
+  {slug:'huyhytbm', name:'Women B Hard Luck', when:'Fri Nov 13',           wk:1},
+  {slug:'actiwpba', name:'Junior ADV',        when:'Sat Nov 14, 11:00 AM', wk:1},
+  {slug:'jywhfmt5', name:'Junior BEG',        when:'Sat Nov 14, 11:00 AM', wk:1}
+];
+/* Confirmed bracket name -> CSR sheet name (normalised: upper case, letters and spaces, "JR" dropped) */
+const ALIAS = {
+  'VINCE BELLIARD':'VINCENT BELLIARD','ZACH WARRINGTON':'ZACHARY WARRINGTON','SHELLEY DUFFNEY':'SHELLY DUFFNEY',
+  'TYLER HUECHERT':'TYLER HEUCHERT','DAVE STRACHAN':'DAVID STRACHAN','NYTRO OTTENBRIET':'NYTRO OTTENBREIT',
+  'JONATHAN CAMPEAU':'JONATHON CAMPEAU','IIAN CURRIE':'IAIN CURRIE','XF CHEN':'YIFEI CHEN',
+  'LOUISE BOUCHERCHARTIER':'LOUISE CHARTIER','MADELINE SICOTTE':'MADELENE SICOTTE','TAMMY DECELES':'TAMMY DECELLES',
+  'TRACEY MASONCUTTS':'TRACEY CUTTS','VAL HENDERSON':'VALERIE HENDERSON'
+};
+/* CSRs entered by hand for players not in the sheet: bracket display name -> CSR */
+const MANUAL = {};
+
+const normName = s => String(s||'').toUpperCase().replace(/\(.*?\)/g,'').replace(/[^A-Z ]/g,'').replace(/\s+/g,' ').trim().replace(/ JR$/,'').trim();
+function parseCSV(text){
+  const rows=[]; let row=[], f='', q=false;
+  for(let i=0;i<text.length;i++){
+    const c=text[i];
+    if(q){ if(c==='"'){ if(text[i+1]==='"'){ f+='"'; i++; } else q=false; } else f+=c; }
+    else if(c==='"') q=true;
+    else if(c===','){ row.push(f); f=''; }
+    else if(c==='\n'){ row.push(f.replace(/\r$/,'')); rows.push(row); row=[]; f=''; }
+    else f+=c;
+  }
+  if(f!=='' || row.length){ row.push(f); rows.push(row); }
+  const head = rows.shift() || [];
+  return rows.filter(r=>r.length>1).map(r => Object.fromEntries(head.map((h,i)=>[h.trim(), (r[i]||'').trim()])));
+}
+function stageOf(obj, label){
+  const titles = {}; (obj.rounds||[]).forEach(r => { if(r) titles[String(r.number)] = r.title; });
+  const players = {}, matches = [];
+  Object.values(obj.matches_by_round||{}).forEach(list => (list||[]).forEach(m => {
+    [m.player1,m.player2].forEach(x => { if(x) players[String(x.id)] = x.display_name; });
+    const sc = Array.isArray(m.scores) && m.scores.length>=2 ? m.scores : [null,null];
+    matches.push([m.identifier,m.raw_identifier,m.round,m.state, m.player1?m.player1.id:null, m.player2?m.player2.id:null,
+      sc[0],sc[1],m.winner_id,m.player1_placeholder_text,m.player2_placeholder_text,
+      m.player1_prereq_identifier,m.player2_prereq_identifier,!!m.player1_is_prereq_match_loser,!!m.player2_is_prereq_match_loser,m.underway_at]);
+  }));
+  const t = obj.tournament||{};
+  return {name:label, type:t.tournament_type, state:t.state, adv:t.participant_count_to_advance, roundTitles:titles, players, matches};
+}
+async function loadData(){
+  const get = (p, type) => fetch(p, {cache:'no-store'}).then(r => { if(!r.ok) throw new Error(p+' ('+r.status+')'); return type==='text' ? r.text() : r.json(); });
+  const [meta, fargo, csv, ...raw] = await Promise.all([get('raw/meta.json').catch(()=>({})), get('raw/fargo.json').catch(()=>({players:{}})), get('raw/players.csv','text'), ...EVENTS.map(e => get('raw/b_'+e.slug+'.json'))]);
+  const brackets = EVENTS.map((e,i) => {
+    const j = raw[i]; const stages = [];
+    (j.groups||[]).forEach(g => g && stages.push(stageOf(g, g.name)));
+    stages.push(stageOf(j, (j.groups||[]).length ? 'Finals' : 'Bracket'));
+    return {slug:e.slug, name:e.name, when:e.when, wk:e.wk, start:e.start||null, state:(j.tournament||{}).state, stages};
+  });
+  const idx = new Map();
+  parseCSV(csv).forEach(r => { const k = normName(r.Player); if(!idx.has(k)) idx.set(k,[]); idx.get(k).push(r); });
+  const names = new Set(); brackets.forEach(b => b.stages.forEach(s => Object.values(s.players).forEach(n => names.add(n))));
+  const ratings = {};
+  [...names].sort().forEach(n => {
+    if(MANUAL[n]){ ratings[n] = {csr:+MANUAL[n], m:'manual', src:n, lg:''}; return; }
+    let k = normName(n), m = 'exact'; if(ALIAS[k]){ k = ALIAS[k]; m = 'alias'; }
+    const h = (idx.get(k)||[]).filter(r => r.CSR !== '');
+    if(!h.length){ ratings[n] = {csr:null, m:'none'}; return; }
+    const best = [...h].sort((a,b) => (+b['Games Played']||0) - (+a['Games Played']||0))[0];
+    ratings[n] = {csr:+best.CSR, m, src:best.Player.replace(/\*/g,''), lg:[...new Set(h.map(r=>r.League))].sort().join('; ')};
+  });
+  return {asOf: meta.asOf || new Date().toISOString(), brackets, ratings, fargo: fargo.players || {}};
+}
+
+function boot(){
+const RC = window.RC;
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const slugOf = n => n.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
+const store = {
+  get(k,d){ try{ const v = localStorage.getItem('rc:'+k); return v==null ? d : JSON.parse(v); }catch(e){ return d; } },
+  set(k,v){ try{ localStorage.setItem('rc:'+k, JSON.stringify(v)); }catch(e){} }
+};
+const title = s => s.toLowerCase().replace(/\b([a-z])/g, c => c.toUpperCase()).replace(/\bMc([a-z])/g,(m,c)=>'Mc'+c.toUpperCase());
+const NSIM = 4000;
+const SCALE = 600; // CSR points per game; best fit on the 71 rated Women's/Hard Luck results from Nov 13
+
+/* ---------- prepare ---------- */
+function prepBracket(br){
+  const n = br.stages.length;
+  const stages = br.stages.map((st,si) => {
+    const P = st.players || {};
+    const nm = id => id==null ? null : (P[String(id)] || null);
+    const ms = (st.matches||[]).map(a => ({id:a[0],raw:a[1],round:a[2],state:a[3],p1:nm(a[4]),p2:nm(a[5]),s1:a[6],s2:a[7],w:nm(a[8]),ph1:a[9],ph2:a[10],pre1:a[11],pre2:a[12],L1:!!a[13],L2:!!a[14],under:a[15],si}));
+    const byId = new Map(ms.map(m => [m.id,m]));
+    const order = [], seen = new Set();
+    const visit = m => { if(seen.has(m.id)) return; seen.add(m.id); [m.pre1,m.pre2].forEach(p => { if(p!=null && byId.has(p)) visit(byId.get(p)); }); order.push(m); };
+    [...ms].sort((a,b)=>a.id-b.id).forEach(visit);
+    const pos = ms.filter(m=>m.round>0).map(m=>m.round), neg = ms.filter(m=>m.round<0).map(m=>m.round);
+    const maxR = pos.length ? Math.max(...pos) : 0, minR = neg.length ? Math.min(...neg) : 0;
+    let finalM = null; ms.forEach(m => { if(m.round===maxR && (!finalM || m.id>finalM.id)) finalM = m; });
+    return {name:st.name, type:st.type, titles:st.roundTitles||{}, ms, byId, order, maxR, minR, finalM, isGroup: n>1 && si<n-1, players:Object.values(P)};
+  });
+  const players = [...new Set(stages.flatMap(s=>s.players))];
+  const rated = players.map(p => RC.ratings[p] && RC.ratings[p].csr).filter(Boolean).sort((a,b)=>a-b);
+  const median = rated.length ? rated[Math.floor(rated.length/2)] : 1500;
+  let race = 0; stages.forEach(s => s.ms.forEach(m => { if(m.state==='complete' && m.s1!=null && m.s2!=null) race = Math.max(race, m.s1, m.s2); }));
+  return {...br, stages, players, median, raceGuess: Math.min(race||3, 9), ratedCount: rated.length, id: slugOf(br.name)};
+}
+const unwrap = x => (x && !Array.isArray(x) && Array.isArray(x.value)) ? x.value : x;
+const B = unwrap(RC.brackets).map(prepBracket);
+
+/* ---------- model ---------- */
+let cur = null, races = {w:3, l:3, f:3};
+/* Race length for a match: winners side, losers side, or the top-16 finals stage */
+const raceFor = (br,st,m) => (br.stages.length>1 && !st.isGroup) ? races.f : (m.round<0 ? races.l : races.w);
+let mode = 'blend';
+/* MPA division table used as the CSR -> Fargo bridge: [CSR, Fargo] at each band edge */
+const BRIDGE = [[1576,426],[1651,476],[1741,526],[1801,576],[1851,626],[1950,730]];
+function csrToF(c){
+  const B = BRIDGE, L = B.length;
+  const lerp = (p,q,x) => p[1] + (x-p[0])*(q[1]-p[1])/(q[0]-p[0]);
+  if(c <= B[0][0]) return lerp(B[0],B[1],c);
+  for(let i=1;i<L;i++) if(c <= B[i][0]) return lerp(B[i-1],B[i],c);
+  return lerp(B[L-2],B[L-1],c);
+}
+const csrOf = n => { const r = RC.ratings[n]; return (r && r.csr) ? r.csr : null; };
+const fOf = n => { const f = (RC.fargo||{})[n]; return (f && f[1] > 0) ? {r:f[0], rob:f[1], name:f[2], loc:f[3]} : null; };
+const fW = rob => rob/(rob+200);   // trust in a Fargo rating grows with its robustness (games played)
+function buildRates(br){
+  const raw = new Map();
+  br.players.forEach(n => {
+    const c = csrOf(n), f = fOf(n), cb = c!=null ? csrToF(c) : null;
+    let v = null;
+    if(mode==='csr') v = cb;
+    else if(mode==='fargo') v = f ? f.r : cb;
+    else v = (f && cb!=null) ? fW(f.rob)*f.r + (1-fW(f.rob))*cb : (cb!=null ? cb : (f ? f.r : null));
+    raw.set(n, v);
+  });
+  const vals = [...raw.values()].filter(v => v!=null).sort((a,b)=>a-b);
+  const med = vals.length ? vals[Math.floor(vals.length/2)] : 500;
+  const map = new Map(), est = new Set();
+  br.players.forEach(n => {
+    let v = raw.get(n);
+    if(v==null){ v = med; est.add(n); }
+    else if(mode==='blend' && csrOf(n)==null){ const f = fOf(n); v = fW(f.rob)*f.r + (1-fW(f.rob))*med; }
+    map.set(n, v);
+  });
+  br.R = {mode, map, est, med, rated: br.players.length - est.size};
+}
+const rate = (br,n) => { if(!br.R || br.R.mode!==mode) buildRates(br); const v = br.R.map.get(n); return v==null ? br.R.med : v; };
+const isEst = n => { if(!cur.R || cur.R.mode!==mode) buildRates(cur); return cur.R.est.has(n); };
+const shown = (br,n) => isEst(n) ? 'est.' : Math.round(rate(br,n));
+const MODE_LABEL = {blend:'Blend', fargo:'Fargo', csr:'CSR'};
+const binom = (n,k) => { let r=1; for(let i=1;i<=k;i++) r = r*(n-k+i)/i; return r; };
+/* P(player A reaches nA games before B reaches nB), each game won by A with probability p */
+function pRace2(p,nA,nB){ let s=0; for(let k=0;k<nB;k++) s += binom(nA-1+k,k)*Math.pow(p,nA)*Math.pow(1-p,k); return s; }
+const pRace = (p,n) => pRace2(p,n,n);
+/* FargoRate's game odds: every 100 points doubles the odds ratio */
+const pGame = (ra,rb) => 1/(1+Math.pow(2,(rb-ra)/100));
+const pc = new Map();
+function pMatch(br,a,b,n){
+  const key = br.id+'|'+mode+'|'+n+'|'+a+'|'+b; let v = pc.get(key);
+  if(v===undefined){ v = pRace(pGame(rate(br,a),rate(br,b)),n); pc.set(key,v); }
+  return v;
+}
+/* Fair race: favourite races to n, find the underdog race that brings the match closest to 50/50 */
+function fairRace(br,a,b,n){
+  const ra = rate(br,a), rb = rate(br,b); if(Math.abs(ra-rb) < 1) return null;
+  const fav = ra>rb ? a : b, dog = ra>rb ? b : a, p = pGame(Math.max(ra,rb), Math.min(ra,rb));
+  let best = n, bestD = Math.abs(pRace2(p,n,n)-0.5);
+  for(let m=1;m<n;m++){ const d = Math.abs(pRace2(p,n,m)-0.5); if(d < bestD){ best = m; bestD = d; } }
+  if(best===n) return null;
+  return {fav, dog, fr:n, dr:best, p:pRace2(p,n,best)};
+}
+/* ---------- schedule estimate ---------- */
+const TZ = 'America/Winnipeg';
+const fmtT = ms => new Date(ms).toLocaleString('en-CA', {timeZone:TZ, weekday:'short', hour:'numeric', minute:'2-digit'});
+let sched = null, schedCfg = {tables:11, mpg:7, chg:3};
+/* Expected number of games in a race: A needs nA, B needs nB, A wins each game with p */
+function expGames(p,nA,nB){
+  let e = 0;
+  for(let k=0;k<nB;k++) e += binom(nA-1+k,k)*Math.pow(p,nA)*Math.pow(1-p,k)*(nA+k);
+  for(let j=0;j<nA;j++) e += binom(nB-1+j,j)*Math.pow(1-p,nB)*Math.pow(p,j)*(nB+j);
+  return e;
+}
+/* Plays the bracket forward on T tables: each table takes the lowest-numbered match that is ready
+   (Challonge play order). Match length = expected games x minutes per game + changeover.
+   Unplayed matches are resolved with the higher-rated player winning, so later times are estimates. */
+function buildSchedule(br){
+  if(!br.start || !br.stages.some(s => s.ms.length)) return null;
+  const T = schedCfg.tables, start = Date.parse(br.start);
+  const anyDone = br.stages.some(s => s.ms.some(m => m.state==='complete'));
+  const t0 = anyDone ? Math.max(start, Date.now()) : start;
+  const K = (si,id) => si+':'+id;
+  const items = []; let deciders = [];
+  br.stages.forEach((st,si) => {
+    if(st.isGroup) deciders = st.ms.filter(m => m.round===st.maxR || m.round===st.minR).map(m => K(si,m.id));
+    st.ms.forEach(m => {
+      let deps = [m.pre1,m.pre2].filter(p => p!=null && st.byId.has(p)).map(p => K(si,p));
+      if(!st.isGroup && br.stages.length>1 && !deps.length) deps = deciders.slice();
+      items.push({key:K(si,m.id), si, st, m, deps});
+    });
+  });
+  const W = new Map(), L = new Map(), out = new Map(); let seeds = null;
+  const free = Array(T).fill(t0);
+  const slots = it => {
+    const {st,m,si} = it;
+    const s = (pre,isL,fixed,ph) => {
+      if(pre!=null && st.byId.has(pre)) return (isL?L:W).get(K(si,pre)) || null;
+      if(fixed) return fixed;
+      if(seeds && ph){ const k = parseInt(ph,10); if(k) return seeds[k-1] || null; }
+      return null;
+    };
+    return [s(m.pre1,m.L1,m.p1,m.ph1), s(m.pre2,m.L2,m.p2,m.ph2)];
+  };
+  const done = (it,a,b,s,e,table) => {
+    const m = it.m; let w, l;
+    if(m.state==='complete' && m.w){ w = m.w; l = m.w===m.p1 ? m.p2 : m.p1; }
+    else if(a && b){ const fa = rate(br,a) >= rate(br,b); w = fa?a:b; l = fa?b:a; }
+    else { w = a||b; l = null; }
+    W.set(it.key,w); L.set(it.key,l); out.set(it.key,{start:s, end:e, table, a, b});
+    if(!seeds && deciders.length && deciders.every(k => out.has(k))){
+      const gi = br.stages.findIndex(s => s.isGroup), g = br.stages[gi];
+      const pick = r => g.ms.filter(m => m.round===r).sort((x,y)=>x.id-y.id).map(m => W.get(K(gi,m.id)));
+      seeds = [...pick(g.maxR), ...pick(g.minR)];
+    }
+  };
+  let guard = 0;
+  while(out.size < items.length && guard++ < 10000){
+    const cand = items.filter(it => !out.has(it.key) && it.deps.every(d => out.has(d)));
+    if(!cand.length) break;
+    cand.forEach(it => { it.ready = Math.max(t0, ...it.deps.map(d => out.get(d).end)); it.ab = slots(it); });
+    const z = cand.find(it => {
+      const [a,b] = it.ab;
+      if(it.m.state==='complete' || !a || !b) return true;
+      if(it.m.pre1!=null && it.m.pre1===it.m.pre2){ const g = K(it.si,it.m.pre1), go = out.get(g); return go && W.get(g)===go.a; }
+      return false;
+    });
+    if(z){
+      const [a,b] = z.ab;
+      if(z.m.state!=='complete' && a && b){ W.set(z.key, W.get(K(z.si,z.m.pre1))); L.set(z.key,null); out.set(z.key,{start:z.ready, end:z.ready, table:null, skip:true}); }
+      else done(z,a,b,z.ready,z.ready,null);
+      continue;
+    }
+    let ti = 0; for(let i=1;i<T;i++) if(free[i] < free[ti]) ti = i;
+    const avail = cand.filter(it => it.ready <= free[ti]).sort((x,y) => x.si-y.si || x.m.id-y.m.id);
+    const it = avail.length ? avail[0] : cand.sort((x,y) => x.ready-y.ready || x.m.id-y.m.id)[0];
+    const s = Math.max(free[ti], it.ready), [a,b] = it.ab, n = raceFor(br,it.st,it.m);
+    const dur = (expGames(pGame(rate(br,a),rate(br,b)), n, n)*schedCfg.mpg + schedCfg.chg) * 60000;
+    free[ti] = s + dur; done(it,a,b,s,s+dur,ti+1);
+  }
+  return {t0, out, K, T};
+}
+
+function rng(seed){ return function(){ seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed>>>15, 1|seed); t = t + Math.imul(t ^ t>>>7, 61|t) ^ t; return ((t ^ t>>>14) >>> 0) / 4294967296; }; }
+
+function simStage(br, st, useResults, seeds, rnd){
+  const W = new Map(), L = new Map(), A = new Map();
+  const slot = (pre,isL,fixed,ph) => {
+    if(pre!=null && st.byId.has(pre)) return (isL?L:W).get(pre) || null;
+    if(useResults && fixed) return fixed;
+    if(seeds && ph){ const k = parseInt(ph,10); if(k) return seeds[k-1] || null; }
+    return fixed || null;
+  };
+  for(const m of st.order){
+    const a = slot(m.pre1,m.L1,m.p1,m.ph1), b = slot(m.pre2,m.L2,m.p2,m.ph2);
+    A.set(m.id,a);
+    if(useResults && m.state==='complete' && m.w){ W.set(m.id,m.w); L.set(m.id, m.w===m.p1 ? m.p2 : m.p1); continue; }
+    if(m.pre1!=null && m.pre1===m.pre2){ const g = m.pre1; if(W.get(g) && W.get(g)===A.get(g)){ W.set(m.id,W.get(g)); L.set(m.id,null); continue; } }
+    if(a && b){ const x = rnd() < pMatch(br,a,b,raceFor(br,st,m)); W.set(m.id, x?a:b); L.set(m.id, x?b:a); }
+    else { W.set(m.id, a||b); L.set(m.id, null); }
+  }
+  return W;
+}
+function qualifiers(st,W){
+  const w = st.ms.filter(m=>m.round===st.maxR).sort((a,b)=>a.id-b.id).map(m=>W.get(m.id));
+  const l = st.ms.filter(m=>m.round===st.minR).sort((a,b)=>a.id-b.id).map(m=>W.get(m.id));
+  return [...w, ...l];
+}
+function runSims(br, useResults){
+  const champ = new Map(), qual = new Map(), inc = (m,k) => m.set(k,(m.get(k)||0)+1);
+  const rnd = rng(20261120);
+  for(let i=0;i<NSIM;i++){
+    let seeds = null;
+    for(const st of br.stages){
+      if(!st.ms.length) continue;
+      const W = simStage(br, st, useResults, seeds, rnd);
+      if(st.isGroup){ seeds = qualifiers(st,W); seeds.forEach(n => n && inc(qual,n)); }
+      else if(st.finalM){ const c = W.get(st.finalM.id); if(c) inc(champ,c); }
+    }
+  }
+  const f = m => new Map([...m].map(([k,v]) => [k, v/NSIM]));
+  return {champ:f(champ), qual:f(qual)};
+}
+
+/* ---------- facts from results ---------- */
+function playerFacts(br,n){
+  let w=0,l=0,qualified=false,out=false; const games=[];
+  for(const st of br.stages){
+    let sl=0;
+    for(const m of st.ms){
+      if(m.p1!==n && m.p2!==n) continue;
+      games.push(m);
+      if(m.state!=='complete' || !m.w) continue;
+      if(m.w===n){ w++; if(st.isGroup && (m.round===st.maxR || m.round===st.minR)) qualified = true; }
+      else { l++; sl++; }
+    }
+    const elim = st.type==='single elimination' ? sl>=1 : sl>=2;
+    if(elim && !(st.isGroup && qualified)) out = true;
+  }
+  return {w,l,qualified,out,games};
+}
+function favRecord(br){
+  let held=0, upset=0; const ups=[];
+  br.stages.forEach(st => st.ms.forEach(m => {
+    if(m.state!=='complete' || !m.w || !m.p1 || !m.p2 || isEst(m.p1) || isEst(m.p2)) return;
+    const a = rate(br,m.p1), b = rate(br,m.p2); if(a===b) return;
+    const fav = a>b ? m.p1 : m.p2;
+    if(m.w===fav) held++; else { upset++; const lo = m.w===m.p1 ? m.p2 : m.p1; ups.push({m, w:m.w, lo, p:pMatch(br,m.w,lo,raceFor(br,st,m)), gap:Math.round(Math.abs(a-b))}); }
+  }));
+  ups.sort((x,y)=>x.p-y.p);
+  return {held, upset, ups};
+}
+const isUpset = (br,m) => m.state==='complete' && m.w && m.p1 && m.p2 && !isEst(m.p1) && !isEst(m.p2) && rate(br,m.w) < rate(br, m.w===m.p1?m.p2:m.p1);
+
+/* ---------- formatting ---------- */
+function pct(x, dash){
+  if(x==null) return '';
+  if(x===0) return dash ? '—' : '0%';
+  if(x>=1) return '100%';
+  if(x<0.001) return '<0.1%';
+  if(x<0.1) return (x*100).toFixed(1)+'%';
+  if(x>0.99) return '>99%';
+  return Math.round(x*100)+'%';
+}
+const roundName = (st,r) => {
+  if(st.isGroup){
+    const t = r>0 ? 'Winners R'+r : 'Losers R'+(-r);
+    return (r===st.maxR || r===st.minR) ? t+' · Top-16 decider' : t;
+  }
+  return st.titles[String(r)] || (r>0 ? 'Round '+r : 'Losers Round '+(-r));
+};
+const placeholder = (st,m,k) => {
+  const pre = k===1?m.pre1:m.pre2, L = k===1?m.L1:m.L2, ph = k===1?m.ph1:m.ph2;
+  if(pre!=null){ const pm = st.byId.get(pre); return (L?'Loser of ':'Winner of ')+(pm?pm.raw:pre); }
+  return ph || 'TBD';
+};
+const stateChip = m => m.state==='complete' ? '<span class="chip done">Final</span>' : (m.state==='open' ? (m.under ? '<span class="chip live">On table</span>' : '<span class="chip open">Ready</span>') : '<span class="chip">Pending</span>');
+
+/* ---------- render ---------- */
+let sims = null, pre = null, follow = null;
+
+function renderTabs(){
+  const wk = {1:'Nov 13–15', 2:'Nov 20–22'};
+  let html = '', lastWk = null;
+  [...B].sort((a,b)=>b.wk-a.wk).forEach(b => {
+    if(b.wk!==lastWk){ html += `<span class="wkhead">${wk[b.wk]||''}</span>`; lastWk = b.wk; }
+    const s = b.state==='complete' || b.state==='awaiting_review' ? 'Final' : b.state==='pending' ? 'Not started' : b.state==='group_stages_underway' ? 'Group stage' : 'Live';
+    html += `<button role="tab" data-id="${b.id}" aria-selected="${b===cur}"><b>${esc(b.name)}</b><small>${s}</small></button>`;
+  });
+  $('#tabs').innerHTML = html;
+}
+
+function computeAll(){
+  buildRates(cur);
+  sims = runSims(cur, true);
+  pre = runSims(cur, false);
+  sched = buildSchedule(cur);
+}
+
+function render(){
+  const br = cur;
+  $('#asof').textContent = new Date(RC.asOf).toLocaleString([], {weekday:'short', month:'short', day:'numeric', hour:'numeric', minute:'2-digit'});
+  renderTabs();
+  const opts = v => [1,2,3,4,5,6,7,8,9].map(n => `<option value="${n}" ${n===v?'selected':''}>${n}</option>`).join('');
+  $('#raceW').innerHTML = opts(races.w); $('#raceL').innerHTML = opts(races.l); $('#raceF').innerHTML = opts(races.f);
+  $('#raceFwrap').hidden = !(br.stages.length>1);
+  $('#mode').value = mode;
+  $('#modelnote').textContent = `${br.when ? br.when+' · ' : ''}${br.players.length} players · ${br.R.rated} rated · ratings on the Fargo scale`;
+
+  const banners = [];
+  const unr = br.players.filter(isEst);
+  if(!br.players.length) banners.push(`The ${esc(br.name)} bracket hasn't been drawn yet. Players drop in from the Main Event; this tab fills in after the next refresh once the bracket is set.`);
+  else if(br.R.rated===0) banners.push(`No one in ${esc(br.name)} has a ${mode==='csr'?'CSR':'CSR or Fargo rating'}, so every match shows as a coin flip.`);
+  else if(unr.length) banners.push(`${unr.length} player${unr.length>1?'s have':' has'} no ${mode==='csr'?'CSR':mode==='fargo'?'Fargo or CSR':'CSR or Fargo'} rating and ${unr.length>1?'are':'is'} set to the bracket median (${Math.round(br.R.med)}), marked <i>est.</i>: ${unr.map(n=>esc(title(n))).join(', ')}.`);
+  $('#banners').innerHTML = banners.map(b => `<div class="banner">${b}</div>`).join('');
+
+  renderKpis(); renderFollow(); renderNow(); renderOdds(); renderSchedule(); renderMatchFilters(); renderMatches(); renderRatings();
+}
+
+function renderSchedule(){
+  const br = cur, sec = $('#schedSec');
+  sec.hidden = !sched;
+  if(!sched) return;
+  $('#schTables').value = schedCfg.tables; $('#schMpg').value = schedCfg.mpg; $('#schChg').value = schedCfg.chg;
+  const rows = [], mile = {};
+  br.stages.forEach((st,si) => {
+    const rs = [...new Set(st.ms.map(m=>m.round))].sort((a,b) => (a>0?a:100-a) - (b>0?b:100-b));
+    rs.forEach(r => {
+      const es = st.ms.filter(m => m.round===r).map(m => sched.out.get(sched.K(si,m.id))).filter(e => e && e.table);
+      if(!es.length) return;
+      const s = Math.min(...es.map(e=>e.start)), e = Math.max(...es.map(e=>e.end));
+      const label = br.stages.length>1 && !st.isGroup ? 'Top 16 · '+(st.titles[String(r)]||'Round '+r) : roundName(st,r);
+      const n = raceFor(br,st,{round:r});
+      rows.push({label, count:es.length, s, e, n, key:(st.isGroup?0:1000)+ (r>0?r:100-r)});
+      if(st.isGroup && (r===st.maxR || r===st.minR)) mile.top16 = Math.max(mile.top16||0, e);
+      if(st.isGroup && r===1) mile.r1 = e;
+      if(!st.isGroup || br.stages.length===1){ mile.end = Math.max(mile.end||0, e); }
+    });
+  });
+  const allE = [...sched.out.values()].filter(e=>e.table);
+  const busy = allE.reduce((t,e)=>t+(e.end-e.start),0), span = Math.max(...allE.map(e=>e.end)) - sched.t0;
+  const tiles = [
+    ['First break', fmtT(sched.t0), `${schedCfg.tables} tables`],
+    ['Winners R1 done', mile.r1 ? fmtT(mile.r1) : '—', ''],
+    ['Top 16 set', mile.top16 ? fmtT(mile.top16) : '—', mile.top16 ? `${((mile.top16-sched.t0)/3600000).toFixed(1)} h of play` : ''],
+    ['Champion', mile.end ? fmtT(mile.end) : '—', `Tables busy ${Math.round(busy/(span*schedCfg.tables)*100)}% of the time`]
+  ];
+  $('#schedTiles').innerHTML = tiles.map(([a,b,c]) => `<div class="kpi"><div class="k">${a}</div><div class="v num" style="font-size:19px">${b}</div><div class="d">${c}</div></div>`).join('');
+  $('#schedTable').innerHTML = `<table><thead><tr><th>Round</th><th class="r">Race</th><th class="r">Matches</th><th>First starts</th><th>Last finishes</th></tr></thead><tbody>${
+    rows.sort((x,y)=>x.s-y.s).map(r => `<tr><td>${esc(r.label)}</td><td class="r num">${r.n}</td><td class="r num">${r.count}</td><td class="num">${fmtT(r.s)}</td><td class="num">${fmtT(r.e)}</td></tr>`).join('')
+  }</tbody></table>`;
+}
+
+function renderKpis(){
+  const br = cur; const all = br.stages.flatMap(s=>s.ms);
+  const done = all.filter(m=>m.state==='complete').length;
+  const fr = favRecord(br);
+  const top = [...sims.champ].sort((a,b)=>b[1]-a[1])[0];
+  const preTop = [...pre.champ].sort((a,b)=>b[1]-a[1])[0];
+  const finished = br.state==='complete' || br.state==='awaiting_review';
+  const k = [];
+  k.push(['Progress', all.length ? `<span class="num">${done}/${all.length}</span>` : '—', all.length ? `${Math.round(done/all.length*100)}% of matches final` : 'Bracket not set']);
+  const tot = fr.held+fr.upset;
+  k.push(['Favourites record', tot ? `<span class="num">${fr.held}–${fr.upset}</span>` : '—', tot ? `Higher CSR won ${Math.round(fr.held/tot*100)}% of ${tot} rated matches` : 'No rated results yet']);
+  const u = fr.ups[0];
+  k.push(['Biggest upset', u ? esc(title(u.w)) : '—', u ? `beat ${esc(title(u.lo))} at ${pct(u.p)} (−${u.gap} pts)` : 'None yet']);
+  if(finished && top) k.push(['Champion', `<span class="gold">${esc(title(top[0]))}</span>`, preTop ? `Pre-event favourite: ${esc(title(preTop[0]))} (${pct(preTop[1])})` : '']);
+  else k.push(['Title favourite', top ? `<span class="gold">${esc(title(top[0]))}</span>` : '—', top ? `${pct(top[1])} to win · rating ${shown(br,top[0])}` : '']);
+  $('#kpis').innerHTML = k.map(([a,b,c]) => `<div class="kpi"><div class="k">${a}</div><div class="v">${b}</div><div class="d">${c}</div></div>`).join('');
+}
+
+function matchCard(br,st,m){
+  const a = m.p1, b = m.p2, done = m.state==='complete';
+  const n = raceFor(br,st,m);
+  const p = (a && b) ? pMatch(br,a,b,n) : null;
+  const row = (n,k,pp,sc) => {
+    const win = done && m.w && m.w===n, lose = done && m.w && n && m.w!==n;
+    const fav = pp!=null && pp>0.5;
+    const nm = n ? `<span class="nm" title="${esc(n)}">${esc(title(n))}</span>` : `<span class="nm tbd">${esc(placeholder(st,m,k))}</span>`;
+    const c = n ? `<span class="csr ${isEst(n)?'est':''}">${shown(br,n)}</span>` : '<span></span>';
+    return `<div class="pl ${win?'win':''} ${lose?'lose':''} ${fav&&!done?'fav':''}">${nm}${c}<span class="pct">${pp!=null && !done ? pct(pp) : ''}</span><span class="sc">${done && sc!=null ? sc : ''}</span></div>`;
+  };
+  const up = isUpset(br,m);
+  const held = done && !up && a && b && !isEst(a) && !isEst(b) && rate(br,a)!==rate(br,b);
+  const extra = up ? '<span class="chip upset">Upset</span>' : held ? '<span class="chip held">Fav won</span>' : '';
+  const fol = follow && (a===follow || b===follow);
+  const fr = (a && b && !done) ? fairRace(br,a,b,n) : null;
+  const fairTxt = fr ? `<div class="fair">Fair race: ${esc(title(fr.fav))} to ${fr.fr}, ${esc(title(fr.dog))} to ${fr.dr} <span class="num">(${pct(fr.p)})</span></div>` : '';
+  const se = (!done && sched) ? sched.out.get(m.si+':'+m.id) : null;
+  const etaTxt = se && se.table ? `<div class="eta">Est. start <b class="num">${fmtT(se.start)}</b> · table ${se.table} · race to ${n}</div>` : (!done ? `<div class="eta">Race to ${n}</div>` : '');
+  return `<div class="m ${fol?'follow':''}">
+    <div class="mh"><span><span class="mid">${esc(m.raw)}</span> · ${esc(roundName(st,m.round))}</span><span>${extra} ${stateChip(m)}</span></div>
+    ${row(a,1,p,m.s1)}
+    ${p!=null && !done ? `<div class="bar" aria-hidden="true"><i style="width:${(p*100).toFixed(1)}%"></i></div>` : ''}
+    ${row(b,2,p!=null?1-p:null,m.s2)}
+    ${etaTxt}
+    ${fairTxt}
+  </div>`;
+}
+
+function renderNow(){
+  const br = cur;
+  const open = br.stages.flatMap(st => st.ms.filter(m => m.state==='open' && m.p1 && m.p2).map(m => [st,m]));
+  open.sort((x,y) => (!!y[1].under - !!x[1].under) || x[1].id - y[1].id);
+  const finished = br.state==='complete' || br.state==='awaiting_review';
+  if(open.length){
+    $('#nowTitle').textContent = 'On the table';
+    $('#nowNote').textContent = `${open.length} match${open.length>1?'es':''} ready to play`;
+    const shown = open.slice(0,12);
+    $('#now').innerHTML = `<div class="grid">${shown.map(([st,m]) => matchCard(br,st,m)).join('')}</div>` + (open.length>12 ? `<p class="note">${open.length-12} more ready matches are in All matches below.</p>` : '');
+  } else if(finished){
+    const fr = favRecord(br);
+    $('#nowTitle').textContent = 'Biggest upsets';
+    $('#nowNote').textContent = fr.ups.length ? 'Lowest pre-match odds that won' : '';
+    const list = fr.ups.slice(0,6).map(u => matchCard(br, br.stages[u.m.si], u.m));
+    $('#now').innerHTML = list.length ? `<div class="grid">${list.join('')}</div>` : '<div class="empty">No rated upsets in this bracket.</div>';
+  } else {
+    $('#nowTitle').textContent = 'On the table';
+    $('#nowNote').textContent = '';
+    $('#now').innerHTML = '<div class="empty">No matches are ready right now.</div>';
+  }
+}
+
+let oddsAll = false;
+function renderOdds(){
+  const br = cur; const hasQ = br.stages.some(s=>s.isGroup);
+  const finished = br.state==='complete' || br.state==='awaiting_review';
+  const rows = br.players.map(n => {
+    const f = playerFacts(br,n);
+    const c = sims.champ.get(n)||0, p0 = pre.champ.get(n)||0, q = sims.qual.get(n)||0;
+    let s, cls;
+    if(finished && c>=0.999){ s='Champion'; cls='c'; }
+    else if(f.out){ s='Out'; cls='o'; }
+    else if(f.qualified){ s='Top 16'; cls='q'; }
+    else if(!f.w && !f.l){ s = br.players.length ? 'Not played' : ''; cls=''; }
+    else { s = f.l ? 'Alive · 1 loss' : 'Alive · unbeaten'; cls=''; }
+    return {n,c,p0,q,s,cls,f};
+  }).sort((a,b) => b.c-a.c || b.q-a.q || b.p0-a.p0 || rate(br,b.n)-rate(br,a.n));
+  $('#oddsNote').textContent = finished ? 'Pre-event odds vs. the result' : `${NSIM.toLocaleString()} simulated runs`;
+  if(!rows.length){ $('#odds').innerHTML = '<div class="empty" style="border:0">Odds appear once the bracket is drawn.</div>'; return; }
+  const lim = oddsAll ? rows.length : 16;
+  const max = Math.max(...rows.map(r=>Math.max(r.c,r.p0)), 0.0001);
+  const body = rows.slice(0,lim).map((r,i) => {
+    const d = r.c - r.p0; const dl = finished || Math.abs(d)<0.005 ? '' : `<span class="delta ${d>0?'up':'dn'}">${d>0?'▲':'▼'}${Math.abs(d*100).toFixed(1)}</span>`;
+    return `<tr class="${r.f.out?'out':''} ${r.n===follow?'me':''}">
+      <td class="num">${i+1}</td>
+      <td>${esc(title(r.n))}</td>
+      <td class="r num">${isEst(r.n)?'<span class="st">est.</span>':shown(br,r.n)}</td>
+      <td><span class="st ${r.cls}">${r.s}</span></td>
+      ${hasQ ? `<td class="r num">${pct(r.q,true)}</td>` : ''}
+      ${finished ? `<td class="r num">${pct(r.p0,true)}</td>` : `<td class="r num">${pct(r.c,true)}<span class="mini"><i style="width:${(r.c/max*100).toFixed(1)}%"></i></span>${dl}</td><td class="r num st">${pct(r.p0,true)}</td>`}
+    </tr>`;
+  }).join('');
+  $('#odds').innerHTML = `<table><thead><tr><th>#</th><th>Player</th><th class="r">Rating</th><th>Status</th>${hasQ?'<th class="r">Top 16</th>':''}${finished?'<th class="r">Pre-event title</th>':'<th class="r">Title now</th><th class="r">Pre-event</th>'}</tr></thead><tbody>${body}</tbody></table>`
+    + (rows.length>16 ? `<button class="more" id="oddsMore">${oddsAll?'Show top 16':'Show all '+rows.length+' players'}</button>` : '');
+  const mb = $('#oddsMore'); if(mb) mb.onclick = () => { oddsAll = !oddsAll; renderOdds(); };
+}
+
+function renderFollow(){
+  const br = cur;
+  const sel = $('#followSel');
+  const names = [...br.players].sort();
+  sel.innerHTML = '<option value="">Choose a player</option>' + names.map(n => `<option value="${esc(n)}" ${n===follow?'selected':''}>${esc(title(n))}</option>`).join('');
+  if(!follow || !br.players.includes(follow)){
+    $('#follow').innerHTML = `<div class="empty">${br.players.length ? 'Pick a player to see their next match, odds and results. Your pick is remembered on this device.' : 'No players in this bracket yet.'}</div>`;
+    return;
+  }
+  const n = follow, f = playerFacts(br,n), r = RC.ratings[n];
+  const next = f.games.filter(m => m.state!=='complete').sort((a,b) => (a.state==='open'?0:1)-(b.state==='open'?0:1) || a.id-b.id)[0];
+  const hasQ = br.stages.some(s=>s.isGroup);
+  const fo = fOf(n);
+  const src = [
+    r && r.csr ? (r.m==='alias' ? `CSR ${r.csr} (listed as ${esc(title(r.src))})` : `CSR ${r.csr}`) : 'No CSR',
+    fo ? `Fargo ${fo.r} (${fo.rob} games)` : 'No Fargo',
+    isEst(n) ? `using median ${Math.round(br.R.med)}` : `${MODE_LABEL[mode]} rating ${shown(br,n)}`
+  ].join(' · ');
+  let nextHtml;
+  if(next){ nextHtml = matchCard(br, br.stages[next.si], next); }
+  else nextHtml = `<div class="empty">${f.out ? 'Eliminated.' : 'No match scheduled yet.'}</div>`;
+  const past = f.games.filter(m=>m.state==='complete').map(m => {
+    const opp = m.p1===n ? m.p2 : m.p1, won = m.w===n;
+    const sc = m.p1===n ? `${m.s1??''}–${m.s2??''}` : `${m.s2??''}–${m.s1??''}`;
+    return `<div><span>${won?'<b style="color:var(--good)">W</b>':'<b style="color:var(--bad)">L</b>'} vs ${esc(title(opp||'bye'))}</span><span class="num st">${sc} · ${esc(roundName(br.stages[m.si],m.round))}</span></div>`;
+  }).join('') || '<div><span class="st">No results yet</span></div>';
+  $('#follow').innerHTML = `<div class="follow-card">
+    <div class="fc-top"><div><div class="fc-name">${esc(title(n))}</div><div class="note">${src}</div></div>
+      <div class="fc-stats">
+        <div><span class="k">Record</span><span class="v">${f.w}–${f.l}</span></div>
+        ${hasQ ? `<div><span class="k">Top 16</span><span class="v">${pct(sims.qual.get(n)||0,true)}</span></div>` : ''}
+        <div><span class="k">Title</span><span class="v" style="color:var(--gold)">${pct(sims.champ.get(n)||0,true)}</span></div>
+        <div><span class="k">Pre-event</span><span class="v" style="color:var(--muted)">${pct(pre.champ.get(n)||0,true)}</span></div>
+      </div></div>
+    <div class="fc-body"><div><div class="rhead" style="margin-top:0">Next match</div>${nextHtml}</div><div><div class="rhead" style="margin-top:0">Results</div><div class="path">${past}</div></div></div>
+  </div>`;
+}
+
+function renderMatchFilters(){
+  const br = cur; const sel = $('#fRound'); const keep = sel.value;
+  const opts = ['<option value="all">All rounds</option>'];
+  br.stages.forEach((st,si) => {
+    const rs = [...new Set(st.ms.map(m=>m.round))].sort((a,b) => (a>0?a:100-a) - (b>0?b:100-b));
+    rs.forEach(r => opts.push(`<option value="${si}:${r}">${esc(br.stages.length>1 && !st.isGroup ? 'Top 16 · '+(st.titles[String(r)]||'Round '+r) : roundName(st,r))}</option>`));
+  });
+  sel.innerHTML = opts.join('');
+  if([...sel.options].some(o=>o.value===keep)) sel.value = keep;
+}
+
+function renderMatches(){
+  const br = cur;
+  const fr = $('#fRound').value, fs = $('#fState').value, q = $('#fSearch').value.trim().toUpperCase();
+  let html = '', count = 0;
+  br.stages.forEach((st,si) => {
+    const rs = [...new Set(st.ms.map(m=>m.round))].sort((a,b) => (a>0?a:100-a) - (b>0?b:100-b));
+    rs.forEach(r => {
+      if(fr!=='all' && fr!==si+':'+r) return;
+      const list = st.ms.filter(m => m.round===r).filter(m => {
+        if(fs==='open' && m.state!=='open') return false;
+        if(fs==='pending' && m.state!=='pending') return false;
+        if(fs==='complete' && m.state!=='complete') return false;
+        if(fs==='upset' && !isUpset(br,m)) return false;
+        if(q && !((m.p1||'').includes(q) || (m.p2||'').includes(q))) return false;
+        return true;
+      }).sort((a,b)=>a.id-b.id);
+      if(!list.length) return;
+      count += list.length;
+      const label = br.stages.length>1 && !st.isGroup ? 'Top 16 · '+(st.titles[String(r)]||'Round '+r) : roundName(st,r);
+      const d = list.filter(m=>m.state==='complete').length;
+      html += `<div class="rhead">${esc(label)} <span class="st" style="text-transform:none;letter-spacing:0">· ${d}/${list.length} final</span></div><div class="grid">${list.map(m=>matchCard(br,st,m)).join('')}</div>`;
+    });
+  });
+  $('#matches').innerHTML = html || '<div class="empty">No matches match these filters.</div>';
+}
+
+function renderRatings(){
+  const br = cur;
+  const rows = [...br.players].sort((a,b) => rate(br,b)-rate(br,a) || a.localeCompare(b)).map(n => {
+    const r = RC.ratings[n], f = fOf(n);
+    const how = !r || !r.csr ? '<span class="chip est">No CSR</span>' : r.m==='alias' ? `<span class="chip open">As ${esc(title(r.src))}</span>` : (r.m==='manual' ? '<span class="chip held">Entered by hand</span>' : '<span class="chip">Exact</span>');
+    const fn = f && normName(f.name) !== normName(n) ? `<span class="chip open">As ${esc(title(f.name))}</span>` : '';
+    return `<tr><td>${esc(title(n))}</td><td class="r num">${shown(br,n)}</td><td class="r num">${r&&r.csr?r.csr:'—'}</td><td>${how}</td><td class="r num">${f?f.r:'—'}</td><td class="r num st">${f?f.rob:''}</td><td>${fn} <span class="st">${f?esc(f.loc):''}</span></td><td class="st">${r&&r.lg?esc(r.lg):''}</td></tr>`;
+  }).join('');
+  const nC = br.players.filter(n => csrOf(n)!=null).length, nF = br.players.filter(n => fOf(n)).length, nB = br.players.filter(n => csrOf(n)!=null && fOf(n)).length;
+  $('#ratingsNote').textContent = `${nC} of ${br.players.length} players have a CSR, ${nF} have a Fargo rating, ${nB} have both. "Rating" is what the ${MODE_LABEL[mode]} model uses, on the Fargo scale. CSR is converted with the MPA division table; Fargo ratings come from FargoRate's public search.`;
+  $('#ratings').innerHTML = rows ? `<table><thead><tr><th>Player</th><th class="r">Rating</th><th class="r">CSR</th><th>CSR match</th><th class="r">Fargo</th><th class="r">Games</th><th>FargoRate record</th><th>League(s)</th></tr></thead><tbody>${rows}</tbody></table>` : '<div class="empty" style="border:0">No players yet.</div>';
+}
+
+/* ---------- wiring ---------- */
+function select(id, push){
+  cur = B.find(b=>b.id===id) || B[0];
+  const defRaces = cur.slug==='ctegjndn' ? {w:5, l:4, f:5} : {w:cur.raceGuess, l:cur.raceGuess, f:cur.raceGuess};
+  races = Object.assign({}, defRaces, store.get('races:'+cur.id, {}));
+  follow = store.get('follow:'+cur.id, cur.players.includes('JASON MCNISH') ? 'JASON MCNISH' : '');
+  oddsAll = false;
+  $('#fRound').value = 'all';
+  computeAll(); render();
+  if(push && location.hash !== '#'+cur.id){ try{ history.replaceState(null,'','#'+cur.id); }catch(e){ location.hash = cur.id; } }
+}
+$('#tabs').addEventListener('click', e => { const b = e.target.closest('button[data-id]'); if(b) select(b.dataset.id, true); });
+[['#raceW','w'],['#raceL','l'],['#raceF','f']].forEach(([sel,k]) => $(sel).addEventListener('change', e => { races[k] = +e.target.value; store.set('races:'+cur.id, races); computeAll(); render(); }));
+['#schTables','#schMpg','#schChg'].forEach(s => $(s).addEventListener('change', () => {
+  schedCfg = {tables: Math.max(1, +$('#schTables').value||11), mpg: Math.max(1, +$('#schMpg').value||7), chg: Math.max(0, +$('#schChg').value||0)};
+  store.set('sched', schedCfg); sched = buildSchedule(cur); render();
+}));
+schedCfg = Object.assign(schedCfg, store.get('sched', {}));
+mode = store.get('mode2', 'fargo'); if(!MODE_LABEL[mode]) mode = 'fargo';
+$('#mode').addEventListener('change', e => { mode = e.target.value; store.set('mode2', mode); computeAll(); render(); });
+$('#followSel').addEventListener('change', e => { follow = e.target.value; store.set('follow:'+cur.id, follow); renderFollow(); renderOdds(); renderNow(); renderMatches(); });
+['#fRound','#fState'].forEach(s => $(s).addEventListener('change', renderMatches));
+$('#fSearch').addEventListener('input', renderMatches);
+window.addEventListener('hashchange', () => { const h = location.hash.slice(1); if(h && (!cur || h!==cur.id)) select(h,false); });
+select(location.hash.slice(1) || 'main-event', false);
+}
+
+document.getElementById('banners').innerHTML = '<div class="banner">Loading brackets and ratings…</div>';
+loadData().then(d => { window.RC = d; boot(); }).catch(err => {
+  document.getElementById('banners').innerHTML = '<div class="banner">Couldn’t load the bracket files (' + String(err.message).replace(/[<>&]/g,'') + '). Reload the page; if it keeps failing, try again in a few minutes.</div>';
+});
+</script>
+
+</body>
+
+</html>
