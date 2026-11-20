@@ -162,8 +162,9 @@ body.desk .q{font-size:14.5px}
 
 /* TV / projector page (tv.html): one 16:9 screen, type scaled to the screen width, no controls */
 #tvHead{display:none}
-body.tv{font-size:clamp(9px,.92vw,30px);cursor:none;overflow:hidden}
-body.tv .wrap{max-width:none;padding:1.1vw 1.5vw}
+/* Laid out on a fixed 1920x1080 canvas and scaled to the screen (see fitTV), so it fits any TV or projector */
+body.tv{font-size:17.6px;cursor:none;overflow:hidden;margin:0}
+body.tv .wrap{max-width:none;width:1920px;height:1080px;padding:20px 28px;transform-origin:0 0;overflow:hidden}
 body.tv header.top, body.tv nav.tabs, body.tv .ctrl.model, body.tv #banners, body.tv #kpis, body.tv #followSec, body.tv .cols,
 body.tv #schedSec, body.tv #allSec, body.tv #ratingsSec, body.tv footer, body.tv #flowSec .sechead, body.tv #flowSec > p.note{display:none}
 body.tv #tvHead{display:flex;align-items:center;gap:1.2em;margin-bottom:.8em}
@@ -1099,6 +1100,12 @@ $('#deskBtn').addEventListener('click', () => { desk = !desk; store.set('desk', 
 applyDesk();
 setInterval(() => { if((desk || TV) && !document.hidden) location.reload(); }, 120000);
 if(TV){
+  // Scale the 1920x1080 board to the screen, centred, keeping its shape
+  const fitTV = () => {
+    const w = document.querySelector('.wrap'), s = Math.min(innerWidth/1920, innerHeight/1080);
+    w.style.transform = `translate(${Math.max(0,(innerWidth-1920*s)/2)}px, ${Math.max(0,(innerHeight-1080*s)/2)}px) scale(${s})`;
+  };
+  fitTV(); window.addEventListener('resize', fitTV);
   // Keep the screen from sleeping where the browser allows it (re-requested after the tab is shown again)
   const wake = () => { try{ navigator.wakeLock && navigator.wakeLock.request('screen').catch(()=>{}); }catch(e){} };
   wake(); document.addEventListener('visibilitychange', () => { if(!document.hidden) wake(); });
