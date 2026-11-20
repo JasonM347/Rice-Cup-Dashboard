@@ -128,6 +128,37 @@ tr.me td{background:var(--gold-soft)}
 details summary{cursor:pointer;color:var(--gold);font-weight:600}
 footer{margin-top:36px;padding-top:16px;border-top:1px solid var(--line);color:var(--faint);font-size:12px;display:grid;gap:6px}
 @media (prefers-reduced-motion:no-preference){.bar i,.mini i{transition:width .35s ease}}
+
+/* Tournament flow: table grid, up-next queue, on-deck list */
+.btn{background:transparent;border:1px solid var(--gold-line);color:var(--gold);border-radius:8px;padding:6px 12px;cursor:pointer;font-size:12.5px;font-weight:600}
+.btn:hover{background:var(--gold-soft)}
+.flowk{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:6px}
+@media (max-width:820px){.flowk{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.kpi .v.warn{color:var(--bad)} .kpi .v.ok{color:var(--good)}
+.tables{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px}
+.tb{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 12px;display:grid;gap:5px;min-width:0;align-content:start}
+.tb .tbh{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.tb .tno{font-family:var(--display);font-weight:800;font-size:15px;letter-spacing:.02em}
+.tb .meta{font-size:11.5px;color:var(--muted);display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.tb.free{border-style:dashed;border-color:var(--gold-line);background:var(--gold-soft)}
+.tb.free .tno{color:var(--gold)}
+.tb.long{border-color:var(--bad)}
+.tb.called{border-color:var(--gold-line)}
+.tb .call{font-size:12.5px}
+.tb .call b{color:var(--fg)}
+.flow2{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:18px;align-items:start}
+@media (max-width:960px){.flow2{grid-template-columns:minmax(0,1fr)}}
+.q td .pn{display:block;line-height:1.3}
+.q td .pn.fv{color:var(--gold)}
+.late{color:var(--bad);font-weight:600}
+.chip.late{border-color:var(--bad);color:var(--bad);background:var(--bad-soft)}
+.chip.lose{border-style:dashed}
+body.desk .ctrl.model, body.desk #kpis, body.desk #followSec, body.desk .cols, body.desk #schedSec, body.desk #allSec, body.desk #ratingsSec, body.desk footer{display:none}
+body.desk .wrap{max-width:1600px}
+body.desk .tables{grid-template-columns:repeat(auto-fill,minmax(270px,1fr))}
+body.desk .tb{font-size:15px}
+body.desk .tb .tno{font-size:18px}
+body.desk .q{font-size:14.5px}
 </style>
 
 <div class="wrap">
@@ -146,7 +177,7 @@ footer{margin-top:36px;padding-top:16px;border-top:1px solid var(--line);color:v
 
   <nav class="tabs" id="tabs" role="tablist" aria-label="Brackets"></nav>
 
-  <div class="ctrl">
+  <div class="ctrl model">
     <label for="mode">Rating <select id="mode"><option value="fargo">Fargo first</option><option value="blend">Blend: Fargo + CSR</option><option value="csr">CSR only</option></select></label>
     <label for="raceW">Winners race <select id="raceW"></select></label>
     <label for="raceL">Losers race <select id="raceL"></select></label>
@@ -156,6 +187,20 @@ footer{margin-top:36px;padding-top:16px;border-top:1px solid var(--line);color:v
   <div id="banners"></div>
 
   <section class="kpis" id="kpis" aria-label="Summary"></section>
+
+  <section class="sec" id="flowSec" aria-labelledby="flowTitle">
+    <div class="sechead"><h2 id="flowTitle">Tournament flow</h2>
+      <div class="ctrl" style="margin:0"><span class="note" id="flowNote"></span><button type="button" class="btn" id="deskBtn">Desk view</button></div>
+    </div>
+    <div class="flowk" id="flowKpis"></div>
+    <div class="rhead">Tables</div>
+    <div class="tables" id="tables"></div>
+    <div class="flow2">
+      <div><div class="rhead">Up next · ready, waiting for a table</div><div class="panel"><div class="tblwrap" id="queue"></div></div></div>
+      <div><div class="rhead">On deck · waiting on a match in play</div><div class="panel"><div class="tblwrap" id="deck"></div></div></div>
+    </div>
+    <p class="note">Order follows the organizer's posted time slots on Challonge, then match order. Times on a table are counted from when the match was started on Challonge; finish times use the expected number of games × minutes per game from the schedule settings below. Data updates about every 10 minutes during play.</p>
+  </section>
 
   <section class="sec" id="followSec">
     <div class="sechead"><h2>Follow a player</h2><label class="note" for="followSel">Player <select id="followSel"></select></label></div>
@@ -186,7 +231,7 @@ footer{margin-top:36px;padding-top:16px;border-top:1px solid var(--line);color:v
     <p class="note">Play runs straight through with no overnight break. Each free table takes the next ready match in Challonge's match order. A match lasts its expected number of games (from both players' ratings and the race length) × minutes per game, plus changeover. Unplayed matches assume the favourite wins, so later rounds are rough. Hard Luck matches sharing the tables aren't included. Times are Winnipeg time.</p>
   </section>
 
-  <section class="sec">
+  <section class="sec" id="allSec">
     <div class="sechead"><h2>All matches</h2>
       <div class="ctrl" style="margin:0">
         <select id="fRound" aria-label="Round"></select>
@@ -199,7 +244,7 @@ footer{margin-top:36px;padding-top:16px;border-top:1px solid var(--line);color:v
     <div id="matches"></div>
   </section>
 
-  <section class="sec">
+  <section class="sec" id="ratingsSec">
     <details id="ratingsBox">
       <summary>Ratings and name matching</summary>
       <p class="note" id="ratingsNote"></p>
@@ -260,7 +305,8 @@ function stageOf(obj, label){
     const sc = Array.isArray(m.scores) && m.scores.length>=2 ? m.scores : [null,null];
     matches.push([m.identifier,m.raw_identifier,m.round,m.state, m.player1?m.player1.id:null, m.player2?m.player2.id:null,
       sc[0],sc[1],m.winner_id,m.player1_placeholder_text,m.player2_placeholder_text,
-      m.player1_prereq_identifier,m.player2_prereq_identifier,!!m.player1_is_prereq_match_loser,!!m.player2_is_prereq_match_loser,m.underway_at]);
+      m.player1_prereq_identifier,m.player2_prereq_identifier,!!m.player1_is_prereq_match_loser,!!m.player2_is_prereq_match_loser,m.underway_at,
+      m.station && m.station.name ? m.station.name : null, m.scheduled_time||null, m.completed_at||null]);
   }));
   const t = obj.tournament||{};
   return {name:label, type:t.tournament_type, state:t.state, adv:t.participant_count_to_advance, roundTitles:titles, players, matches};
@@ -303,12 +349,26 @@ const NSIM = 4000;
 const SCALE = 600; // CSR points per game; best fit on the 71 rated Women's/Hard Luck results from Nov 13
 
 /* ---------- prepare ---------- */
+/* Organizer's posted slot on Challonge, e.g. "Fri  6pm CST" or "Sat 11:59 am CST", read as Winnipeg
+   wall-clock time on that event weekend (Friday the 13th or the 20th). ISO times are used as is. */
+const EV_OFFSET = '-05:00';
+function parseSlot(s, wk){
+  if(!s) return null;
+  if(/^\d{4}-\d\d-\d\dT/.test(s)){ const t = Date.parse(s); return isNaN(t) ? null : t; }
+  const m = String(s).match(/^(Thu|Fri|Sat|Sun)\w*\s+(\d{1,2})(?::(\d\d))?\s*(am|pm)/i);
+  if(!m) return null;
+  const day = (wk===1 ? 13 : 20) + {thu:-1, fri:0, sat:1, sun:2}[m[1].toLowerCase()];
+  let h = (+m[2]) % 12; if(m[4].toLowerCase()==='pm') h += 12;
+  const t = Date.parse(`2026-11-${String(day).padStart(2,'0')}T${String(h).padStart(2,'0')}:${m[3]||'00'}:00${EV_OFFSET}`);
+  return isNaN(t) ? null : t;
+}
 function prepBracket(br){
   const n = br.stages.length;
   const stages = br.stages.map((st,si) => {
     const P = st.players || {};
     const nm = id => id==null ? null : (P[String(id)] || null);
-    const ms = (st.matches||[]).map(a => ({id:a[0],raw:a[1],round:a[2],state:a[3],p1:nm(a[4]),p2:nm(a[5]),s1:a[6],s2:a[7],w:nm(a[8]),ph1:a[9],ph2:a[10],pre1:a[11],pre2:a[12],L1:!!a[13],L2:!!a[14],under:a[15],si}));
+    const ms = (st.matches||[]).map(a => ({id:a[0],raw:a[1],round:a[2],state:a[3],p1:nm(a[4]),p2:nm(a[5]),s1:a[6],s2:a[7],w:nm(a[8]),ph1:a[9],ph2:a[10],pre1:a[11],pre2:a[12],L1:!!a[13],L2:!!a[14],under:a[15],
+      table:a[16]||null, slotTxt:a[17]||null, slot:parseSlot(a[17], br.wk), doneAt:a[18] ? Date.parse(a[18]) : null, si}));
     const byId = new Map(ms.map(m => [m.id,m]));
     const order = [], seen = new Set();
     const visit = m => { if(seen.has(m.id)) return; seen.add(m.id); [m.pre1,m.pre2].forEach(p => { if(p!=null && byId.has(p)) visit(byId.get(p)); }); order.push(m); };
@@ -603,7 +663,7 @@ function render(){
   else if(unr.length) banners.push(`${unr.length} player${unr.length>1?'s have':' has'} no ${mode==='csr'?'CSR':mode==='fargo'?'Fargo or CSR':'CSR or Fargo'} rating and ${unr.length>1?'are':'is'} set to the bracket median (${Math.round(br.R.med)}), marked <i>est.</i>: ${unr.map(n=>esc(title(n))).join(', ')}.`);
   $('#banners').innerHTML = banners.map(b => `<div class="banner">${b}</div>`).join('');
 
-  renderKpis(); renderFollow(); renderNow(); renderOdds(); renderSchedule(); renderMatchFilters(); renderMatches(); renderRatings();
+  renderKpis(); renderFlow(); renderFollow(); renderNow(); renderOdds(); renderSchedule(); renderMatchFilters(); renderMatches(); renderRatings();
 }
 
 function renderSchedule(){
@@ -638,6 +698,129 @@ function renderSchedule(){
   $('#schedTable').innerHTML = `<table><thead><tr><th>Round</th><th class="r">Race</th><th class="r">Matches</th><th>First starts</th><th>Last finishes</th></tr></thead><tbody>${
     rows.sort((x,y)=>x.s-y.s).map(r => `<tr><td>${esc(r.label)}</td><td class="r num">${r.n}</td><td class="r num">${r.count}</td><td class="num">${fmtT(r.s)}</td><td class="num">${fmtT(r.e)}</td></tr>`).join('')
   }</tbody></table>`;
+}
+
+/* ---------- tournament flow: tables, up next, on deck ---------- */
+const fmtClock = ms => new Date(ms).toLocaleTimeString('en-CA', {timeZone:TZ, hour:'numeric', minute:'2-digit'});
+const tableNo = s => { const d = String(s||'').match(/\d+/); return d ? +d[0] : 999; };
+const shortTable = s => s ? 'T' + (tableNo(s)===999 ? s : tableNo(s)) : '';
+const mins = ms => Math.max(0, Math.round(ms/60000));
+const dur = (h) => h<60 ? `${h} min` : `${Math.floor(h/60)} h ${String(h%60).padStart(2,'0')}`;
+/* Expected minutes for a match: expected games x minutes per game + changeover */
+function matchMin(br,st,m){
+  const n = raceFor(br,st,m);
+  const p = (m.p1 && m.p2) ? pGame(rate(br,m.p1), rate(br,m.p2)) : 0.5;
+  return expGames(p,n,n)*schedCfg.mpg + schedCfg.chg;
+}
+const flowOrder = (x,y) => (x.slot ?? Infinity) - (y.slot ?? Infinity) || x.si - y.si || x.id - y.id;
+function pairCell(br,st,m){
+  const n = raceFor(br,st,m);
+  const p = (m.p1 && m.p2) ? pMatch(br,m.p1,m.p2,n) : null;
+  const one = (nm,pp) => `<span class="pn ${pp!=null && pp>0.5 ? 'fv' : ''}" title="${esc(nm)}">${esc(title(nm))}${pp!=null ? ` <span class="num st">${pct(pp)}</span>` : ''}</span>`;
+  return one(m.p1,p) + one(m.p2,p!=null?1-p:null);
+}
+function renderFlow(){
+  const br = cur, sec = $('#flowSec');
+  const finished = br.state==='complete' || br.state==='awaiting_review';
+  const all = br.stages.flatMap(st => st.ms);
+  sec.hidden = !all.length || finished || !br.players.length;
+  if(sec.hidden) return;
+  const now = Date.now();
+  const stOf = m => br.stages[m.si];
+
+  // Tables: every table named on Challonge, padded to the table count in the schedule settings
+  const names = new Set(all.filter(m => m.table).map(m => m.table));
+  for(let i=1; i<=schedCfg.tables; i++) if(![...names].some(n => tableNo(n)===i)) names.add('TABLE '+i);
+  const tabs = [...names].sort((a,b) => tableNo(a)-tableNo(b) || a.localeCompare(b));
+  const onT = new Map();
+  all.filter(m => m.state==='open' && m.table).forEach(m => {
+    const prev = onT.get(m.table);
+    if(!prev || (!!m.under && !prev.under) || (!!m.under === !!prev.under && flowOrder(m,prev) < 0)) onT.set(m.table, m);
+  });
+  const busy = new Set(onT.values());
+  const noTable = all.filter(m => m.state==='open' && m.under && !m.table);          // started without a table set
+  const queue = all.filter(m => m.state==='open' && m.p1 && m.p2 && !m.table && !m.under).sort(flowOrder);
+  const free = tabs.filter(t => !onT.has(t));
+
+  // Est. finish of matches in play
+  const endOf = m => m.under ? Date.parse(m.under) + matchMin(br,stOf(m),m)*60000 : null;
+
+  // On deck: pending matches whose missing player(s) come from a match that is open now
+  const openIds = new Set(all.filter(m => m.state==='open').map(m => m.si+':'+m.id));
+  const side = (m,k) => {
+    const p = k===1 ? m.p1 : m.p2, pre = k===1 ? m.pre1 : m.pre2, L = k===1 ? m.L1 : m.L2;
+    if(p) return {txt:`<span class="pn">${esc(title(p))}</span>`, ok:true, end:now};
+    if(pre==null) return {txt:`<span class="st">${esc(placeholder(stOf(m),m,k))}</span>`, ok:false};
+    const f = stOf(m).byId.get(pre);
+    if(!f || !openIds.has(m.si+':'+f.id) || !(f.table || f.under)) return {txt:'', ok:false};
+    const where = f.table ? shortTable(f.table) + (f.under ? '' : ' (called)') : 'in play';
+    return {txt:`<span class="pn st">${L?'Loser':'Winner'} of <b class="num">${esc(f.raw)}</b> · ${where}</span>`, ok:true, end:endOf(f), fm:f};
+  };
+  const deck = all.filter(m => m.state==='pending').map(m => ({m, a:side(m,1), b:side(m,2)}))
+    .filter(x => x.a.ok && x.b.ok && (x.a.fm || x.b.fm)).sort((x,y) => flowOrder(x.m,y.m));
+
+  // Pace against the posted slots: matches whose slot has passed but haven't started
+  const late = all.filter(m => m.slot && m.slot <= now && m.state!=='complete' && !m.under && !(m.state==='open' && m.table));
+  const oldest = late.length ? Math.min(...late.map(m => m.slot)) : null;
+  const done = all.filter(m => m.state==='complete').length;
+  const nextSlot = all.filter(m => m.slot && m.state!=='complete').map(m => m.slot).sort((a,b)=>a-b)[0];
+
+  const k = [];
+  k.push(['Tables in use', `<span class="num">${busy.size + noTable.length}/${tabs.length}</span>`, free.length ? `${free.length} free: ${free.map(shortTable).join(', ')}` : 'Every table busy']);
+  k.push(['Ready, no table', `<span class="num">${queue.length}</span>`, queue.length ? `Next: ${esc(queue[0].raw)} · ${esc(title(queue[0].p1))} vs ${esc(title(queue[0].p2))}` : 'Nothing waiting']);
+  k.push(['Posted schedule', late.length ? `<span class="warn">${late.length} late</span>` : (done || busy.size ? '<span class="ok">On time</span>' : '—'),
+    late.length ? `Oldest slot ${fmtClock(oldest)}, ${dur(mins(now-oldest))} ago` : (nextSlot ? `Next slot ${fmtT(nextSlot)}` : 'No posted slots')]);
+  k.push(['Progress', `<span class="num">${done}/${all.length}</span>`, `${Math.round(done/all.length*100)}% of matches final · ${deck.length} on deck`]);
+  $('#flowKpis').innerHTML = k.map(([a,b,c]) => `<div class="kpi"><div class="k">${a}</div><div class="v">${b}</div><div class="d">${c}</div></div>`).join('');
+  $('#flowNote').textContent = `Challonge data from ${fmtClock(Date.parse(RC.asOf))}`;
+
+  // Table cards; free tables get the next unassigned match from the queue as a suggested call
+  let qi = 0;
+  const card = t => {
+    const m = onT.get(t);
+    if(!m){
+      const s = queue[qi++];
+      return `<div class="tb free"><div class="tbh"><span class="tno">${esc(shortTable(t))}</span><span class="chip open">Free</span></div>
+        ${s ? `<div class="call">Call <b class="num">${esc(s.raw)}</b>: <b>${esc(title(s.p1))}</b> vs <b>${esc(title(s.p2))}</b></div><div class="meta"><span>${esc(roundName(stOf(s),s.round))}</span><span>${s.slot ? 'Slot '+fmtT(s.slot) : ''}</span></div>` : '<div class="note">Nothing ready to call</div>'}
+      </div>`;
+    }
+    const st = stOf(m), n = raceFor(br,st,m), p = (m.p1&&m.p2) ? pMatch(br,m.p1,m.p2,n) : null;
+    const end = endOf(m), long = end && now > end + 10*60000;
+    const line = (nm,pp) => `<div class="pl ${pp!=null&&pp>0.5?'fav':''}"><span class="nm" title="${esc(nm||'')}">${nm ? esc(title(nm)) : '<span class="tbd">TBD</span>'}</span><span class="csr ${nm&&isEst(nm)?'est':''}">${nm ? shown(br,nm) : ''}</span><span class="pct">${pp!=null ? pct(pp) : ''}</span></div>`;
+    const timing = m.under ? `On ${dur(mins(now - Date.parse(m.under)))}${end ? (long ? ` · <span class="late">running long</span>` : ` · est. done ${fmtClock(end)}`) : ''}` : 'Called, not started';
+    return `<div class="tb ${long?'long':''} ${m.under?'':'called'}">
+      <div class="tbh"><span class="tno">${esc(shortTable(t))}</span>${m.under ? '<span class="chip live">In play</span>' : '<span class="chip open">Called</span>'}</div>
+      ${line(m.p1,p)}${line(m.p2,p!=null?1-p:null)}
+      <div class="meta"><span><span class="num">${esc(m.raw)}</span> · ${esc(roundName(st,m.round))}</span><span>Race to ${n}</span></div>
+      <div class="meta"><span>${timing}</span></div>
+    </div>`;
+  };
+  $('#tables').innerHTML = tabs.map(card).join('') + noTable.map(m => {
+    const st = stOf(m), end = endOf(m);
+    return `<div class="tb q"><div class="tbh"><span class="tno">No table</span><span class="chip live">In play</span></div><div>${pairCell(br,st,m)}</div><div class="meta"><span class="num">${esc(m.raw)}</span><span>On ${dur(mins(now-Date.parse(m.under)))}${end ? ' · est. done '+fmtClock(end) : ''}</span></div></div>`;
+  }).join('');
+
+  // Up next
+  const qRows = queue.slice(0, 24).map((m,i) => {
+    const st = stOf(m), isLate = m.slot && m.slot <= now;
+    return `<tr><td class="num">${i+1}</td><td><span class="num">${esc(m.raw)}</span><br><span class="st">${esc(roundName(st,m.round))}</span></td><td>${pairCell(br,st,m)}</td>
+      <td class="r num">${m.slot ? `<span class="${isLate?'late':''}">${fmtT(m.slot)}</span>` : '—'}${i < free.length ? `<br><span class="chip open">${esc(shortTable(free[i]))}</span>` : ''}</td>
+      <td class="r num st">${raceFor(br,st,m)}<br>~${Math.round(matchMin(br,st,m))} min</td></tr>`;
+  }).join('');
+  $('#queue').innerHTML = queue.length
+    ? `<table class="q"><thead><tr><th>#</th><th>Match</th><th>Players · win chance</th><th class="r">Slot</th><th class="r">Race</th></tr></thead><tbody>${qRows}</tbody></table>${queue.length>24 ? `<p class="note" style="padding:8px 10px;margin:0">${queue.length-24} more ready matches.</p>` : ''}`
+    : '<div class="empty" style="border:0">No matches are ready and waiting. New ones appear here as results come in.</div>';
+
+  // On deck
+  const dRows = deck.slice(0, 20).map(({m,a,b}) => {
+    const st = stOf(m), ready = Math.max(a.end || 0, b.end || 0);
+    const known = (a.end && b.end && !(a.fm && !a.fm.under) && !(b.fm && !b.fm.under));
+    return `<tr><td><span class="num">${esc(m.raw)}</span><br><span class="st">${esc(roundName(st,m.round))}</span></td><td>${a.txt}${b.txt}</td>
+      <td class="r num">${m.slot ? fmtT(m.slot) : '—'}</td><td class="r num st">${known && ready > now ? '~'+fmtClock(ready) : (known ? 'any minute' : '—')}</td></tr>`;
+  }).join('');
+  $('#deck').innerHTML = deck.length
+    ? `<table class="q"><thead><tr><th>Match</th><th>Players</th><th class="r">Slot</th><th class="r">Ready</th></tr></thead><tbody>${dRows}</tbody></table>${deck.length>20 ? `<p class="note" style="padding:8px 10px;margin:0">${deck.length-20} more on deck.</p>` : ''}`
+    : '<div class="empty" style="border:0">Nothing on deck. Once matches are on the tables, the matches their winners and losers go to show here, so those players can be warned.</div>';
 }
 
 function renderKpis(){
@@ -676,7 +859,10 @@ function matchCard(br,st,m){
   const fr = (a && b && !done) ? fairRace(br,a,b,n) : null;
   const fairTxt = fr ? `<div class="fair">Fair race: ${esc(title(fr.fav))} to ${fr.fr}, ${esc(title(fr.dog))} to ${fr.dr} <span class="num">(${pct(fr.p)})</span></div>` : '';
   const se = (!done && sched) ? sched.out.get(m.si+':'+m.id) : null;
-  const etaTxt = se && se.table ? `<div class="eta">Est. start <b class="num">${fmtT(se.start)}</b> · table ${se.table} · race to ${n}</div>` : (!done ? `<div class="eta">Race to ${n}</div>` : '');
+  const etaTxt = (!done && m.state==='open' && (m.table || m.under))
+      ? `<div class="eta">${m.under ? 'In play' : 'Called'}${m.table ? ` on <b>${esc(title(m.table))}</b>` : ''}${m.under ? ` · ${dur(mins(Date.now()-Date.parse(m.under)))}` : ''} · race to ${n}</div>`
+    : (!done && m.slot) ? `<div class="eta">Posted slot <b class="num">${fmtT(m.slot)}</b>${se && se.table ? ` · model est. <span class="num">${fmtClock(se.start)}</span>` : ''} · race to ${n}</div>`
+    : se && se.table ? `<div class="eta">Est. start <b class="num">${fmtT(se.start)}</b> · table ${se.table} · race to ${n}</div>` : (!done ? `<div class="eta">Race to ${n}</div>` : '');
   return `<div class="m ${fol?'follow':''}">
     <div class="mh"><span><span class="mid">${esc(m.raw)}</span> · ${esc(roundName(st,m.round))}</span><span>${extra} ${stateChip(m)}</span></div>
     ${row(a,1,p,m.s1)}
@@ -692,7 +878,14 @@ function renderNow(){
   const open = br.stages.flatMap(st => st.ms.filter(m => m.state==='open' && m.p1 && m.p2).map(m => [st,m]));
   open.sort((x,y) => (!!y[1].under - !!x[1].under) || x[1].id - y[1].id);
   const finished = br.state==='complete' || br.state==='awaiting_review';
-  if(open.length){
+  if(!finished && !$('#flowSec').hidden){
+    // The flow board shows what's on the tables; this column tracks upsets for commentary
+    const fr = favRecord(br);
+    $('#nowTitle').textContent = 'Upsets so far';
+    $('#nowNote').textContent = fr.ups.length ? 'Lowest pre-match odds that won' : '';
+    const list = fr.ups.slice(0,6).map(u => matchCard(br, br.stages[u.m.si], u.m));
+    $('#now').innerHTML = list.length ? `<div class="grid">${list.join('')}</div>` : '<div class="empty">No upsets yet. When a lower-rated player wins, the match shows here with the odds they beat.</div>';
+  } else if(open.length){
     $('#nowTitle').textContent = 'On the table';
     $('#nowNote').textContent = `${open.length} match${open.length>1?'es':''} ready to play`;
     const shown = open.slice(0,12);
@@ -850,6 +1043,13 @@ $('#tabs').addEventListener('click', e => { const b = e.target.closest('button[d
   schedCfg = {tables: Math.max(1, +$('#schTables').value||11), mpg: Math.max(1, +$('#schMpg').value||7), chg: Math.max(0, +$('#schChg').value||0)};
   store.set('sched', schedCfg); sched = buildSchedule(cur); render();
 }));
+/* Desk view: just the flow board, larger, reloading every 2 minutes to pick up new Challonge data */
+let desk = store.get('desk', false);
+const applyDesk = () => { document.body.classList.toggle('desk', desk); $('#deskBtn').textContent = desk ? 'Exit desk view' : 'Desk view'; $('#deskBtn').setAttribute('aria-pressed', desk); };
+$('#deskBtn').addEventListener('click', () => { desk = !desk; store.set('desk', desk); applyDesk(); if(desk) $('#flowSec').scrollIntoView({block:'start'}); });
+applyDesk();
+setInterval(() => { if(desk && !document.hidden) location.reload(); }, 120000);
+setInterval(() => { if(!document.hidden && cur) renderFlow(); }, 30000);   // keep "on for N min" current
 schedCfg = Object.assign(schedCfg, store.get('sched', {}));
 mode = store.get('mode2', 'fargo'); if(!MODE_LABEL[mode]) mode = 'fargo';
 $('#mode').addEventListener('change', e => { mode = e.target.value; store.set('mode2', mode); computeAll(); render(); });

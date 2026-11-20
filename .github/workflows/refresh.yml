@@ -5,13 +5,17 @@ on:
     branches: [main]
   workflow_dispatch:
   schedule:
-    # Every 20 minutes during play hours only (Winnipeg is UTC-5 this weekend), to stay
-    # inside Challonge's free 500 API requests a month (about 3 requests per run, about 400 total):
-    #   Fri 6 PM-3 AM, Sat 10 AM-3 AM, Sun 10 AM-3 AM.
+    # Play hours only (Winnipeg is UTC-5 this weekend), sized for Challonge's free 500 API
+    # requests a month: Main Event every 10 minutes, Hard Luck on the first run of each hour
+    # (about 2.2 requests per run, about 350 for the weekend).
+    #   Fri 6 PM-3 AM and Sat 10 AM-11 PM every 10 min; Sun 10 AM-8 PM every 20 min.
     # GitHub may delay scheduled runs by a few minutes when busy.
-    - cron: '*/20 23 20 11 *'
-    - cron: '*/20 0-7 21-23 11 *'
-    - cron: '*/20 15-23 21-22 11 *'
+    - cron: '*/10 23 20 11 *'
+    - cron: '*/10 0-7 21 11 *'
+    - cron: '*/10 15-23 21 11 *'
+    - cron: '*/10 0-3 22 11 *'
+    - cron: '*/20 15-23 22 11 *'
+    - cron: '*/20 0 23 11 *'
 
 permissions:
   contents: write
@@ -39,7 +43,10 @@ jobs:
           CHALLONGE_CLIENT_SECRET: ${{ secrets.CHALLONGE_CLIENT_SECRET }}
         run: |
           set +e
-          python3 scripts/challonge_api.py ctegjndn jjwwzfei
+          slugs="ctegjndn"
+          # Hard Luck: hourly on the schedule, always when run by hand
+          if [ "${{ github.event_name }}" != "schedule" ] || [ "$(date -u +%M)" -lt 10 ]; then slugs="$slugs jjwwzfei"; fi
+          python3 scripts/challonge_api.py $slugs
           rc=$?
           set -e
           if [ $rc -eq 2 ]; then

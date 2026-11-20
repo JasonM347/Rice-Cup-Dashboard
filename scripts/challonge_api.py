@@ -62,7 +62,9 @@ def fetch(slug, token):
     if len(parts) < want_p:
         parts = pages("participants")
     names = {str(p["id"]): (p.get("attributes") or {}).get("name") or "" for p in parts}
-    return t["attributes"], matches, names
+    stations = {str(x["id"]): (x.get("attributes") or {}).get("name") or ""
+                for x in inc if x.get("type") == "station"}
+    return t["attributes"], matches, names, stations
 
 
 def score_pair(attr, p1, p2):
@@ -84,13 +86,16 @@ def update(slug, token):
     path = f"raw/b_{slug}.json"
     with open(path, encoding="utf-8") as f:
         base = json.load(f)
-    tattr, matches, names = fetch(slug, token)
+    tattr, matches, names, stations = fetch(slug, token)
     known = {}
     for stage in [base] + (base.get("groups") or []):
         for lst in (stage.get("matches_by_round") or {}).values():
             for m in lst or []:
                 if m.get("id") is not None:
                     known[str(m["id"])] = m
+                st = m.get("station") or {}
+                if st.get("id") and st.get("name"):
+                    stations.setdefault(str(st["id"]), st["name"])
     if matches and not known:
         print(f"{slug}: bracket is drawn on Challonge ({len(matches)} matches) but its layout isn't saved yet; "
               "save challonge.com/{slug}.json once to raw/. Left unchanged.".replace("{slug}", slug))
@@ -111,7 +116,14 @@ def update(slug, token):
         m["state"] = a.get("state", m.get("state"))
         m["winner_id"] = int(a["winner_id"]) if a.get("winner_id") else None
         m["scores"] = score_pair(a, ids[0], ids[1])
-        m["underway_at"] = (a.get("timestamps") or {}).get("underway_at")
+        ts = a.get("timestamps") or {}
+        m["underway_at"] = ts.get("underway_at")
+        # Table the organizer assigned (Challonge "station"); kept as {id, name} like challonge.com's JSON
+        sd = (rel.get("station") or {}).get("data")
+        sid = str(sd["id"]) if sd and sd.get("id") else None
+        m["station"] = {"id": int(sid), "name": stations.get(sid, "")} if sid else None
+        # Challonge has no completed time in v2.1; the last update of a finished match is close enough
+        m["completed_at"] = ts.get("updated_at") if m["state"] == "complete" else None
         done += m["state"] == "complete"
     if known and hit < len(known):
         print(f"{slug}: only {hit} of {len(known)} saved matches came back from the API; left unchanged.")
