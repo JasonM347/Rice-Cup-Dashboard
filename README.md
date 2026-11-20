@@ -6,6 +6,10 @@ Unofficial predictions for the 2026 CanCentral Rice Cup Championships (Crazy 8 B
 
 `.github/workflows/refresh.yml` runs every 15 minutes during play hours (Nov 20–22). It reads the Main Event and Hard Luck brackets through the official Challonge API (`scripts/challonge_api.py`, using the `CHALLONGE_API_KEY` repository secret), converts them to the format the page reads, and republishes the site only when they changed. Run it any time from **Actions → Refresh brackets and publish → Run workflow**.
 
+## TV / projector
+
+Open `tv.html` (https://jasonm347.github.io/Rice-Cup-Dashboard/tv.html) full screen on the venue TV: tables, up next and on deck on one 16:9 screen, reloading every 2 minutes. Add `#hard-luck` to show the Hard Luck bracket instead. `tv.html` is a copy of `index.html`; copy it again after editing the page.
+
 ## Data
 
 - `raw/b_<slug>.json` – Challonge bracket data for the eight 2026 brackets.

@@ -159,6 +159,40 @@ body.desk .tables{grid-template-columns:repeat(auto-fill,minmax(270px,1fr))}
 body.desk .tb{font-size:15px}
 body.desk .tb .tno{font-size:18px}
 body.desk .q{font-size:14.5px}
+
+/* TV / projector page (tv.html): one 16:9 screen, type scaled to the screen width, no controls */
+#tvHead{display:none}
+body.tv{font-size:clamp(9px,.92vw,30px);cursor:none;overflow:hidden}
+body.tv .wrap{max-width:none;padding:1.1vw 1.5vw}
+body.tv header.top, body.tv nav.tabs, body.tv .ctrl.model, body.tv #banners, body.tv #kpis, body.tv #followSec, body.tv .cols,
+body.tv #schedSec, body.tv #allSec, body.tv #ratingsSec, body.tv footer, body.tv #flowSec .sechead, body.tv #flowSec > p.note{display:none}
+body.tv #tvHead{display:flex;align-items:center;gap:1.2em;margin-bottom:.8em}
+#tvHead img{width:3.6em;height:3.6em;border-radius:50%}
+#tvHead .t1{font-size:.8em;letter-spacing:.16em;text-transform:uppercase;color:var(--gold);font-weight:600}
+#tvHead .t2{font-family:var(--display);font-size:2.1em;font-weight:800;line-height:1.1}
+#tvHead .clock{margin-left:auto;text-align:right}
+#tvHead .clock b{display:block;font-family:var(--mono);font-size:2.3em;font-weight:600;line-height:1}
+#tvHead .clock span{color:var(--muted);font-size:.85em}
+body.tv #flowSec{margin:0;display:grid;grid-template-columns:minmax(0,1.8fr) minmax(0,1fr);gap:0 1.4em;align-items:start}
+body.tv .flowk{grid-column:1/-1;gap:.8em;margin-bottom:.4em}
+body.tv .flowk .kpi{padding:.7em 1em;border-radius:.8em}
+body.tv .kpi .k{font-size:.8em}
+body.tv .kpi .v{font-size:2.1em}
+body.tv .kpi .d{font-size:.9em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+body.tv .rhead{font-size:.85em;margin:.9em 0 .5em}
+body.tv .tables{grid-template-columns:repeat(3,minmax(0,1fr));gap:.7em}
+body.tv .tb{padding:.7em .9em;border-radius:.8em;gap:.3em}
+body.tv .tb .tno{font-size:1.55em}
+body.tv .tb .pl{font-size:1.2em}
+body.tv .tb .pl .csr, body.tv .tb .pl .pct{font-size:.85em}
+body.tv .tb .meta{font-size:.9em}
+body.tv .tb .call{font-size:1.15em}
+body.tv .chip{font-size:.75em}
+body.tv .flow2{grid-template-columns:minmax(0,1fr);gap:0}
+body.tv table{font-size:1.05em}
+body.tv th{font-size:.75em}
+body.tv th, body.tv td{padding:.45em .7em}
+body.tv .empty{font-size:1em}
 </style>
 
 <div class="wrap">
@@ -188,13 +222,19 @@ body.desk .q{font-size:14.5px}
 
   <section class="kpis" id="kpis" aria-label="Summary"></section>
 
+  <div id="tvHead" aria-label="Rice Cup tournament board">
+    <img src="logo.webp" alt="Rice Cup Championships logo">
+    <div><div class="t1">2026 CanCentral Rice Cup Championships · Crazy 8 Billiards</div><div class="t2" id="tvTitle">Main Event · Tables</div></div>
+    <div class="clock"><b id="tvClock"></b><span id="tvData"></span></div>
+  </div>
+
   <section class="sec" id="flowSec" aria-labelledby="flowTitle">
     <div class="sechead"><h2 id="flowTitle">Tournament flow</h2>
       <div class="ctrl" style="margin:0"><span class="note" id="flowNote"></span><button type="button" class="btn" id="deskBtn">Desk view</button></div>
     </div>
     <div class="flowk" id="flowKpis"></div>
-    <div class="rhead">Tables</div>
-    <div class="tables" id="tables"></div>
+    <div><div class="rhead">Tables</div>
+    <div class="tables" id="tables"></div></div>
     <div class="flow2">
       <div><div class="rhead">Up next · ready, waiting for a table</div><div class="panel"><div class="tblwrap" id="queue"></div></div></div>
       <div><div class="rhead">On deck · waiting on a match in play</div><div class="panel"><div class="tblwrap" id="deck"></div></div></div>
@@ -345,6 +385,9 @@ const store = {
   set(k,v){ try{ localStorage.setItem('rc:'+k, JSON.stringify(v)); }catch(e){} }
 };
 const title = s => s.toLowerCase().replace(/\b([a-z])/g, c => c.toUpperCase()).replace(/\bMc([a-z])/g,(m,c)=>'Mc'+c.toUpperCase());
+/* TV / projector mode: tv.html, or ?tv on the dashboard */
+const TV = /(^|\/)tv\.html$/.test(location.pathname) || /[?&]tv\b/.test(location.search);
+if(TV) document.body.classList.add('tv');
 const NSIM = 4000;
 const SCALE = 600; // CSR points per game; best fit on the 71 rated Women's/Hard Luck results from Nov 13
 
@@ -801,25 +844,31 @@ function renderFlow(){
   }).join('');
 
   // Up next
-  const qRows = queue.slice(0, 24).map((m,i) => {
+  const QN = TV ? 7 : 24, DN = TV ? 4 : 20;
+  if(TV){
+    $('#tvTitle').textContent = br.name + ' · Tables';
+    $('#tvClock').textContent = fmtClock(now);
+    $('#tvData').textContent = `Results from Challonge at ${fmtClock(Date.parse(RC.asOf))}`;
+  }
+  const qRows = queue.slice(0, QN).map((m,i) => {
     const st = stOf(m), isLate = m.slot && m.slot <= now;
     return `<tr><td class="num">${i+1}</td><td><span class="num">${esc(m.raw)}</span><br><span class="st">${esc(roundName(st,m.round))}</span></td><td>${pairCell(br,st,m)}</td>
       <td class="r num">${m.slot ? `<span class="${isLate?'late':''}">${fmtT(m.slot)}</span>` : '—'}${i < free.length ? `<br><span class="chip open">${esc(shortTable(free[i]))}</span>` : ''}</td>
       <td class="r num st">${raceFor(br,st,m)}<br>~${Math.round(matchMin(br,st,m))} min</td></tr>`;
   }).join('');
   $('#queue').innerHTML = queue.length
-    ? `<table class="q"><thead><tr><th>#</th><th>Match</th><th>Players · win chance</th><th class="r">Slot</th><th class="r">Race</th></tr></thead><tbody>${qRows}</tbody></table>${queue.length>24 ? `<p class="note" style="padding:8px 10px;margin:0">${queue.length-24} more ready matches.</p>` : ''}`
+    ? `<table class="q"><thead><tr><th>#</th><th>Match</th><th>Players · win chance</th><th class="r">Slot</th><th class="r">Race</th></tr></thead><tbody>${qRows}</tbody></table>${queue.length>QN ? `<p class="note" style="padding:.5em .8em;margin:0">${queue.length-QN} more ready matches.</p>` : ''}`
     : '<div class="empty" style="border:0">No matches are ready and waiting. New ones appear here as results come in.</div>';
 
   // On deck
-  const dRows = deck.slice(0, 20).map(({m,a,b}) => {
+  const dRows = deck.slice(0, DN).map(({m,a,b}) => {
     const st = stOf(m), ready = Math.max(a.end || 0, b.end || 0);
     const known = (a.end && b.end && !(a.fm && !a.fm.under) && !(b.fm && !b.fm.under));
     return `<tr><td><span class="num">${esc(m.raw)}</span><br><span class="st">${esc(roundName(st,m.round))}</span></td><td>${a.txt}${b.txt}</td>
       <td class="r num">${m.slot ? fmtT(m.slot) : '—'}</td><td class="r num st">${known && ready > now ? '~'+fmtClock(ready) : (known ? 'any minute' : '—')}</td></tr>`;
   }).join('');
   $('#deck').innerHTML = deck.length
-    ? `<table class="q"><thead><tr><th>Match</th><th>Players</th><th class="r">Slot</th><th class="r">Ready</th></tr></thead><tbody>${dRows}</tbody></table>${deck.length>20 ? `<p class="note" style="padding:8px 10px;margin:0">${deck.length-20} more on deck.</p>` : ''}`
+    ? `<table class="q"><thead><tr><th>Match</th><th>Players</th><th class="r">Slot</th><th class="r">Ready</th></tr></thead><tbody>${dRows}</tbody></table>${deck.length>DN ? `<p class="note" style="padding:.5em .8em;margin:0">${deck.length-DN} more on deck.</p>` : ''}`
     : '<div class="empty" style="border:0">Nothing on deck. Once matches are on the tables, the matches their winners and losers go to show here, so those players can be warned.</div>';
 }
 
@@ -1048,7 +1097,12 @@ let desk = store.get('desk', false);
 const applyDesk = () => { document.body.classList.toggle('desk', desk); $('#deskBtn').textContent = desk ? 'Exit desk view' : 'Desk view'; $('#deskBtn').setAttribute('aria-pressed', desk); };
 $('#deskBtn').addEventListener('click', () => { desk = !desk; store.set('desk', desk); applyDesk(); if(desk) $('#flowSec').scrollIntoView({block:'start'}); });
 applyDesk();
-setInterval(() => { if(desk && !document.hidden) location.reload(); }, 120000);
+setInterval(() => { if((desk || TV) && !document.hidden) location.reload(); }, 120000);
+if(TV){
+  // Keep the screen from sleeping where the browser allows it (re-requested after the tab is shown again)
+  const wake = () => { try{ navigator.wakeLock && navigator.wakeLock.request('screen').catch(()=>{}); }catch(e){} };
+  wake(); document.addEventListener('visibilitychange', () => { if(!document.hidden) wake(); });
+}
 setInterval(() => { if(!document.hidden && cur) renderFlow(); }, 30000);   // keep "on for N min" current
 schedCfg = Object.assign(schedCfg, store.get('sched', {}));
 mode = store.get('mode2', 'fargo'); if(!MODE_LABEL[mode]) mode = 'fargo';
