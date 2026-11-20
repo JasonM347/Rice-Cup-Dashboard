@@ -122,6 +122,9 @@ def update(slug, token):
     with open(path, "w", encoding="utf-8") as f:
         json.dump(base, f, ensure_ascii=False, separators=(",", ":"))
     print(f"{slug}: {tattr.get('state')}, {len(names)} players, {hit} matches updated ({done} complete)")
+    if len(matches) > hit:
+        print(f"::warning::{slug}: {len(matches) - hit} new matches on Challonge (e.g. the top-16 bracket) "
+              f"aren't in raw/b_{slug}.json yet; save challonge.com/{slug}.json there to show them.")
     return True
 
 
