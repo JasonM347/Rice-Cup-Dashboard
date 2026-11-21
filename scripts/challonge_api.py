@@ -82,6 +82,22 @@ def fetch(slug, token):
     names = {str(p["id"]): (p.get("attributes") or {}).get("name") or "" for p in parts}
     stations = {str(x["id"]): (x.get("attributes") or {}).get("name") or ""
                 for x in inc if x.get("type") == "station"}
+    # The tournament endpoint links tables to matches from the table's side, not the match's,
+    # so build match id -> (station id, name) from whatever match reference each table carries.
+    on_table = {}
+    for x in inc:
+        if x.get("type") != "station":
+            continue
+        a, rel = x.get("attributes") or {}, x.get("relationships") or {}
+        mids = [a.get(k) for k in ("match_id", "current_match_id") if a.get(k)]
+        for r in rel.values():
+            d = (r or {}).get("data") if isinstance(r, dict) else None
+            for dd in (d if isinstance(d, list) else [d]):
+                if isinstance(dd, dict) and dd.get("type") == "match" and dd.get("id"):
+                    mids.append(dd["id"])
+        for mid in mids:
+            on_table[str(mid)] = (str(x["id"]), a.get("name") or "")
+    stations["__by_match__"] = on_table
     return t["attributes"], matches, names, stations
 
 
@@ -118,7 +134,8 @@ def update(slug, token):
         print(f"{slug}: bracket is drawn on Challonge ({len(matches)} matches) but its layout isn't saved yet; "
               "save challonge.com/{slug}.json once to raw/. Left unchanged.".replace("{slug}", slug))
         return True
-    hit = done = 0
+    by_match = stations.pop("__by_match__", {})
+    hit = done = tabled = 0
     for x in matches:
         m = known.get(str(x["id"]))
         if m is None:
@@ -139,7 +156,16 @@ def update(slug, token):
         # Table the organizer assigned (Challonge "station"); kept as {id, name} like challonge.com's JSON
         sd = (rel.get("station") or {}).get("data")
         sid = str(sd["id"]) if sd and sd.get("id") else None
-        m["station"] = {"id": int(sid), "name": stations.get(sid, "")} if sid else None
+        if sid:
+            m["station"] = {"id": int(sid), "name": stations.get(sid, "")}
+        elif str(x["id"]) in by_match:
+            bsid, bname = by_match[str(x["id"])]
+            m["station"] = {"id": int(bsid), "name": bname or stations.get(bsid, "")}
+        elif not by_match and m["state"] == "open":
+            pass   # API sent no table links at all: keep the table from the last challonge.com copy
+        else:
+            m["station"] = None
+        tabled += m.get("station") is not None
         # Challonge has no completed time in v2.1; the last update of a finished match is close enough
         m["completed_at"] = ts.get("updated_at") if m["state"] == "complete" else None
         done += m["state"] == "complete"
@@ -151,7 +177,8 @@ def update(slug, token):
         g.setdefault("tournament", {})["state"] = tattr.get("state")
     with open(path, "w", encoding="utf-8") as f:
         json.dump(base, f, ensure_ascii=False, separators=(",", ":"))
-    print(f"{slug}: {tattr.get('state')}, {len(names)} players, {hit} matches updated ({done} complete)")
+    print(f"{slug}: {tattr.get('state')}, {len(names)} players, {hit} matches updated ({done} complete, "
+          f"{tabled} on a table; {len(stations)} tables, {len(by_match)} table links)")
     if len(matches) > hit:
         print(f"::warning::{slug}: {len(matches) - hit} new matches on Challonge (e.g. the top-16 bracket) "
               f"aren't in raw/b_{slug}.json yet; save challonge.com/{slug}.json there to show them.")
