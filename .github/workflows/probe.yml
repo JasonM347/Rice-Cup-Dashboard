@@ -1,11 +1,10 @@
 name: Check Challonge v2.1 access
 
-# Dry run: fetches and converts the brackets, shows what would change, commits nothing.
 on:
   workflow_dispatch:
   push:
     branches: [main]
-    paths: [scripts/challonge_api.py, .github/workflows/probe.yml]
+    paths: [scripts/station_probe.py]
 
 permissions:
   contents: read
@@ -15,22 +14,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Convert without publishing
+      - name: Where are table assignments?
         env:
           CHALLONGE_CLIENT_ID: ${{ secrets.CHALLONGE_CLIENT_ID }}
           CHALLONGE_CLIENT_SECRET: ${{ secrets.CHALLONGE_CLIENT_SECRET }}
-        run: |
-          python3 scripts/challonge_api.py ctegjndn jjwwzfei
-          git diff --stat -- raw/
-          python3 - <<'PY'
-          import json
-          j = json.load(open("raw/b_ctegjndn.json"))
-          for st in [j] + j.get("groups", []):
-              ms = [m for l in st["matches_by_round"].values() for m in l]
-              both = sum(1 for m in ms if m.get("player1") and m.get("player2"))
-              print(st.get("name", "Finals"), len(ms), "matches,", both, "with both players,",
-                    sum(m["state"] == "complete" for m in ms), "complete")
-              for m in ms[:3]:
-                  print("  ", m["raw_identifier"], m["state"], (m.get("player1") or {}).get("display_name"),
-                        "vs", (m.get("player2") or {}).get("display_name"), m["scores"], m["winner_id"])
-          PY
+        run: python3 scripts/station_probe.py
