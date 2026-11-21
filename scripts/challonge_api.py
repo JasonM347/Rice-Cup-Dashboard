@@ -26,12 +26,30 @@ def call(url, data=None, headers=None):
         return json.load(r)
 
 
+# Optional: reuse one login token across runs (it lasts 7 days) to save API requests.
+# The file lives only on the runner (outside the repo) and is never printed.
+TOKEN_FILE = os.environ.get("CHALLONGE_TOKEN_FILE", "").strip()
+
+
 def get_token():
+    if TOKEN_FILE and os.path.exists(TOKEN_FILE):
+        with open(TOKEN_FILE) as f:
+            tok = f.read().strip()
+        if tok:
+            return tok
     form = {"grant_type": "client_credentials", "client_id": CID, "client_secret": SEC,
             "scope": "me tournaments:read matches:read participants:read"}
     j = call("https://api.challonge.com/oauth/token", urllib.parse.urlencode(form).encode(),
              {"Content-Type": "application/x-www-form-urlencoded"})
+    if TOKEN_FILE:
+        with open(TOKEN_FILE, "w") as f:
+            f.write(j["access_token"])
     return j["access_token"]
+
+
+def forget_token():
+    if TOKEN_FILE and os.path.exists(TOKEN_FILE):
+        os.remove(TOKEN_FILE)
 
 
 def fetch(slug, token):
@@ -155,6 +173,8 @@ def main():
             ok = update(slug, token) and ok
         except urllib.error.HTTPError as e:
             print(f"{slug}: Challonge API returned HTTP {e.code}")
+            if e.code == 401:
+                forget_token()   # expired or revoked: log in again next time
             ok = False
         except Exception as e:  # keep the last good file on any problem
             print(f"{slug}: could not read or convert ({type(e).__name__}: {e})")

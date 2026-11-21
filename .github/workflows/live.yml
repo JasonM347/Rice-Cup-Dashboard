@@ -1,0 +1,59 @@
+name: Live refresh loop
+
+# GitHub's free scheduler skips most runs when it's busy (it ran 4 of ~130 on Nov 20-21), so this
+# job stays awake instead: every 6 minutes it reads the brackets from the Challonge API, pushes any
+# change and starts "Publish site". After about 5.5 hours it starts a fresh copy of itself, and it
+# stops for good at 9 PM Winnipeg time on Sunday, Nov 22. One login token is reused, so each pass
+# costs about 1.2 of Challonge's 500 free monthly requests (Hard Luck is read every 6th pass).
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: [.github/workflows/live.yml]
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: live
+  cancel-in-progress: true
+
+jobs:
+  loop:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    steps:
+      - uses: actions/checkout@v4
+      - name: Refresh every 6 minutes
+        env:
+          CHALLONGE_CLIENT_ID: ${{ secrets.CHALLONGE_CLIENT_ID }}
+          CHALLONGE_CLIENT_SECRET: ${{ secrets.CHALLONGE_CLIENT_SECRET }}
+          CHALLONGE_TOKEN_FILE: ${{ runner.temp }}/challonge_token
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          stop=$(date -d '2026-11-23T02:00:00Z' +%s)
+          end=$(( $(date +%s) + 330*60 ))
+          git config user.name "rice-cup-refresh"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          i=0
+          while [ "$(date +%s)" -lt "$end" ] && [ "$(date +%s)" -lt "$stop" ]; do
+            git fetch -q origin main && git reset -q --hard origin/main
+            slugs="ctegjndn"; [ $((i % 6)) -eq 0 ] && slugs="$slugs jjwwzfei"
+            python3 scripts/challonge_api.py $slugs || echo "::warning::Pass $i: refresh had a problem (see above)"
+            if ! git diff --quiet -- raw/; then
+              printf '{"asOf":"%s"}' "$(TZ=America/Winnipeg date -Iseconds)" > raw/meta.json
+              git add raw/
+              git commit -q -m "Refresh brackets $(TZ=America/Winnipeg date '+%a %H:%M')"
+              if git push -q origin HEAD:main; then
+                gh workflow run publish.yml --ref main || echo "::warning::Could not start Publish site"
+              else
+                echo "::warning::Push rejected (someone else pushed); next pass starts from the new version"
+              fi
+            else
+              echo "Pass $i $(TZ=America/Winnipeg date '+%H:%M'): no change"
+            fi
+            i=$((i+1))
+            sleep 360
+          done
+          if [ "$(date +%s)" -lt "$stop" ]; then gh workflow run live.yml --ref main; fi

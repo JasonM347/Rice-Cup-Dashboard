@@ -4,19 +4,6 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
-  schedule:
-    # Play hours only (Winnipeg is UTC-5 this weekend), sized for Challonge's free 500 API
-    # requests a month: Main Event every 10 minutes, Hard Luck on the first run of each hour
-    # (about 2.2 requests per run, about 350 for the weekend).
-    #   Fri 6 PM-3 AM and Sat 10 AM-11 PM every 10 min; Sun 10 AM-8 PM every 20 min.
-    # GitHub may delay scheduled runs by a few minutes when busy.
-    - cron: '*/10 23 20 11 *'
-    - cron: '*/10 0-7 21 11 *'
-    - cron: '*/10 15-23 21 11 *'
-    - cron: '*/10 0-3 22 11 *'
-    - cron: '*/20 15-23 22 11 *'
-    - cron: '*/20 0 23 11 *'
-
 permissions:
   contents: write
   pages: write
